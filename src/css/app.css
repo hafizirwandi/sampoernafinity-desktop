@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Semantic tokens: point at CSS variables so light/dark just swap the variable below. */
+    --color-bg: var(--ui-bg);
+    --color-surface: var(--ui-surface);
+    --color-surface-alt: var(--ui-surface-alt);
+    --color-border: var(--ui-border);
+    --color-text: var(--ui-text);
+    --color-text-muted: var(--ui-text-muted);
+
+    /* Brand red, taken from the app logo. Stays the same across themes. */
+    --color-primary-50: #fef2f2;
+    --color-primary-100: #fee2e2;
+    --color-primary-200: #fecaca;
+    --color-primary-300: #fca5a5;
+    --color-primary-400: #f87171;
+    --color-primary-500: #ef4444;
+    --color-primary-600: #dc2626;
+    --color-primary-700: #b91c1c;
+    --color-primary-800: #991b1b;
+    --color-primary-900: #7f1d1d;
+}
+
+:root {
+    --ui-bg: #f4f5f7;
+    --ui-surface: #ffffff;
+    --ui-surface-alt: #f8fafc;
+    --ui-border: #e5e7eb;
+    --ui-text: #111827;
+    --ui-text-muted: #6b7280;
+}
+
+[data-theme='dark'] {
+    --ui-bg: #0c0d10;
+    --ui-surface: #16181d;
+    --ui-surface-alt: #1d2027;
+    --ui-border: #2a2e37;
+    --ui-text: #f3f4f6;
+    --ui-text-muted: #9ca3af;
+}
+
+html,
+body {
+    height: 100%;
+}
