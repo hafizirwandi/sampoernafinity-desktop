@@ -1,10 +1,17 @@
-const { app, BrowserWindow, ipcMain, net, protocol, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, net, protocol, shell, dialog } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { saveToken, loadToken, clearToken } = require('./tokenStore');
 const tiktokConnection = require('./tiktokConnection');
 const statsStore = require('./statsStore');
 const giftsStore = require('./giftsStore');
+const actionsStore = require('./actionsStore');
+const eventsStore = require('./eventsStore');
+const overlayStore = require('./overlayStore');
+const minecraftStore = require('./minecraftStore');
+const overlayServer = require('./overlayServer');
+const actionExecutor = require('./actionExecutor');
+const eventEngine = require('./eventEngine');
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
 const DESKTOP_SCHEME = process.env.DESKTOP_APP_SCHEME || 'sampoernafinity';
@@ -117,12 +124,30 @@ if (!gotLock) {
         handleDeepLink(url);
     });
 
-    app.whenReady().then(() => {
+    app.whenReady().then(async () => {
         registerProtocol();
 
         protocol.handle('gift-asset', (request) => {
             const filePath = decodeURIComponent(request.url.replace('gift-asset://local/', ''));
             return net.fetch(pathToFileURL(filePath).toString());
+        });
+
+        overlayServer.onScreenStatus((status) => {
+            mainWindow?.webContents.send('overlay:screen-status', status);
+        });
+
+        try {
+            await overlayServer.start();
+        } catch (error) {
+            console.error('Gagal memulai server overlay:', error);
+        }
+
+        eventEngine.start({
+            tiktokConnection,
+            overlayServer,
+            overlayStore,
+            getWebContents: () => mainWindow?.webContents,
+            toAssetUrl,
         });
 
         createWindow();
@@ -145,6 +170,7 @@ if (!gotLock) {
     app.on('before-quit', () => {
         tiktokConnection.disconnect();
         statsStore.flush();
+        overlayServer.stop();
     });
 }
 
@@ -250,6 +276,12 @@ function presentCatalog(store) {
 
 ipcMain.handle('gifts:list', () => presentCatalog(giftsStore.getAll()));
 
+// How many images to download at once. The catalog can run into the
+// thousands, so downloading one-by-one would take hours and a single stalled
+// request (no timeout) could hang the whole sync; a bounded pool keeps this
+// down to a couple of minutes while still being gentle on the CDN.
+const GIFT_DOWNLOAD_CONCURRENCY = 16;
+
 ipcMain.handle('gifts:sync', async () => {
     const token = loadToken();
     if (!token) throw new Error('Kamu harus masuk dulu.');
@@ -261,33 +293,48 @@ ipcMain.handle('gifts:sync', async () => {
     const cached = giftsStore.getAll();
     const cachedByKey = new Map(cached.gifts.map((g) => [`${g.type}-${g.tiktokId}`, g]));
 
-    const gifts = [];
-    for (const g of remote.gifts) {
-        const key = `${g.type}-${g.tiktok_id}`;
-        const previous = cachedByKey.get(key);
-        let localImage = previous?.localImage || null;
+    const total = remote.gifts.length;
+    const gifts = new Array(total);
+    let completed = 0;
+    let cursor = 0;
 
-        if (!localImage || previous.imageUrl !== g.image_url) {
-            try {
-                localImage = await giftsStore.downloadImage(g.image_url, key);
-            } catch {
-                // Keep whatever we had cached (or nothing) and fall back to
-                // the remote URL for this item; the next sync will retry.
-                localImage = previous?.localImage || null;
+    async function worker() {
+        while (cursor < total) {
+            const index = cursor++;
+            const g = remote.gifts[index];
+            const key = `${g.type}-${g.tiktok_id}`;
+            const previous = cachedByKey.get(key);
+            let localImage = previous?.localImage || null;
+
+            if (!localImage || previous?.imageUrl !== g.image_url) {
+                try {
+                    localImage = await giftsStore.downloadImage(g.image_url, key);
+                } catch {
+                    // Keep whatever we had cached (or nothing) and fall back to
+                    // the remote URL for this item; the next sync will retry.
+                    localImage = previous?.localImage || null;
+                }
             }
-        }
 
-        gifts.push({
-            id: g.id,
-            type: g.type,
-            categoryId: g.gift_category_id,
-            tiktokId: g.tiktok_id,
-            name: g.name,
-            coin: g.coin,
-            imageUrl: g.image_url,
-            localImage,
-        });
+            gifts[index] = {
+                id: g.id,
+                type: g.type,
+                categoryId: g.gift_category_id,
+                tiktokId: g.tiktok_id,
+                name: g.name,
+                coin: g.coin,
+                imageUrl: g.image_url,
+                localImage,
+            };
+
+            completed += 1;
+            mainWindow?.webContents.send('gifts:sync-progress', { done: completed, total });
+        }
     }
+
+    await Promise.all(
+        Array.from({ length: Math.min(GIFT_DOWNLOAD_CONCURRENCY, total) }, worker)
+    );
 
     const saved = giftsStore.save({
         syncedAt: new Date().toISOString(),
@@ -302,3 +349,82 @@ ipcMain.handle('gifts:sync', async () => {
 
     return presentCatalog(saved);
 });
+
+// --- Aksi (Actions) ----------------------------------------------------
+
+ipcMain.handle('actions:list', () => actionsStore.list());
+ipcMain.handle('actions:create', (_event, payload) => actionsStore.create(payload));
+ipcMain.handle('actions:update', (_event, id, payload) => actionsStore.update(id, payload));
+ipcMain.handle('actions:remove', (_event, id) => actionsStore.remove(id));
+ipcMain.handle('actions:duplicate', (_event, id) => actionsStore.duplicate(id));
+
+const MEDIA_PICKER_FILTERS = {
+    audio: [{ name: 'Audio', extensions: ['mp3', 'wav', 'ogg', 'm4a'] }],
+    media: [{ name: 'Media', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'webm'] }],
+};
+
+ipcMain.handle('actions:pick-media', async (_event, kind) => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile'],
+        filters: MEDIA_PICKER_FILTERS[kind] || MEDIA_PICKER_FILTERS.media,
+    });
+
+    if (result.canceled || !result.filePaths.length) return null;
+
+    const originalPath = result.filePaths[0];
+    const filePath = actionsStore.importMediaFile(originalPath);
+
+    return { filePath, originalName: path.basename(originalPath) };
+});
+
+// Runs an Aksi against a synthetic sample context so it can be tested from
+// the Aksi table without needing a real TikTok LIVE event to trigger it.
+ipcMain.handle('actions:run', async (_event, id) => {
+    const action = actionsStore.get(id);
+    if (!action) throw new Error('Aksi tidak ditemukan.');
+
+    const sampleContext = {
+        nickname: 'TestUser',
+        username: 'testuser',
+        giftName: 'Rose',
+        count: 1,
+        repeatCount: 1,
+        coins: 100,
+        comment: 'Halo dari test!',
+        likeCount: 5,
+    };
+
+    const overlaySettings = overlayStore.getSettings();
+
+    return actionExecutor.run(action, sampleContext, {
+        webContents: mainWindow?.webContents,
+        toAssetUrl,
+        overlayServer,
+        overlayThroughOverlay: overlaySettings.playAudioThroughOverlay,
+        screenConnected: action.screenId ? overlayServer.isScreenConnected(action.screenId) : false,
+    });
+});
+
+// --- Event (Triggers) ---------------------------------------------------
+
+ipcMain.handle('events:list', () => eventsStore.list());
+ipcMain.handle('events:create', (_event, payload) => eventsStore.create(payload));
+ipcMain.handle('events:update', (_event, id, payload) => eventsStore.update(id, payload));
+ipcMain.handle('events:remove', (_event, id) => eventsStore.remove(id));
+ipcMain.handle('events:duplicate', (_event, id) => eventsStore.duplicate(id));
+ipcMain.handle('events:toggle', (_event, id) => eventsStore.toggle(id));
+
+// --- Overlay (local OBS/Live Studio browser-source server) -------------
+
+ipcMain.handle('overlay:get-settings', () => overlayStore.getSettings());
+ipcMain.handle('overlay:update-settings', (_event, payload) => overlayStore.updateSettings(payload));
+ipcMain.handle('overlay:list-screens', () => overlayStore.listScreens());
+ipcMain.handle('overlay:add-screen', (_event, name) => overlayStore.addScreen(name));
+ipcMain.handle('overlay:update-screen', (_event, id, payload) => overlayStore.updateScreen(id, payload));
+ipcMain.handle('overlay:remove-screen', (_event, id) => overlayStore.removeScreen(id));
+
+// --- Minecraft (ServerTap) connection -----------------------------------
+
+ipcMain.handle('minecraft:get-settings', () => minecraftStore.getSettings());
+ipcMain.handle('minecraft:save-settings', (_event, payload) => minecraftStore.saveSettings(payload));
+ipcMain.handle('minecraft:test-connection', () => minecraftStore.testConnection());

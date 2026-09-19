@@ -17,6 +17,13 @@ let connection = null;
 let currentSessionId = null;
 let state = { status: 'idle', username: null, error: null };
 let onChange = null;
+let onLiveEventCallback = null;
+
+// Top gifter for the CURRENT live session only (resets every time a session
+// starts/ends) — distinct from statsStore's multi-day leaderboard, which is
+// a rolling aggregate across sessions and answers a different question.
+let topGifterTotals = new Map();
+let topGifterId = null;
 
 function setState(next) {
     state = { ...state, ...next };
@@ -31,11 +38,59 @@ function getState() {
     return state;
 }
 
+function onLiveEvent(callback) {
+    onLiveEventCallback = callback;
+}
+
+function emitLiveEvent(event) {
+    if (onLiveEventCallback) onLiveEventCallback(event);
+}
+
+function resetTopGifter() {
+    topGifterTotals = new Map();
+    topGifterId = null;
+}
+
+function recordTopGifter(uniqueId, diamonds) {
+    if (!uniqueId || !diamonds) return;
+
+    const total = (topGifterTotals.get(uniqueId) || 0) + diamonds;
+    topGifterTotals.set(uniqueId, total);
+
+    if (!topGifterId || total > (topGifterTotals.get(topGifterId) || 0)) {
+        topGifterId = uniqueId;
+    }
+}
+
+function getTopGifterUniqueId() {
+    return topGifterId;
+}
+
+// The modern TikTokLiveConnection payloads expose user identity via
+// `user.displayId` (not `user.uniqueId`, which only existed on the
+// deprecated legacy client) and role flags via `userIdentity` on chat/gift
+// messages; other event types don't carry `userIdentity`, so those fall
+// back to the equivalent raw fields on `user`.
+function deriveUserInfo(data) {
+    const user = data.user || {};
+    const identity = data.userIdentity;
+
+    return {
+        uniqueId: user.displayId || undefined,
+        nickname: user.nickname,
+        isFollower: identity ? !!identity.isFollowerOfAnchor : !!user.isFollower,
+        isSubscriber: identity ? !!identity.isSubscriberOfAnchor : !!user.subscribeInfo?.isSubscribe,
+        isModerator: identity ? !!identity.isModeratorOfAnchor : !!user.userAttr?.isAdmin,
+    };
+}
+
 function endCurrentSession() {
     if (currentSessionId) {
         statsStore.endSession(currentSessionId);
         currentSessionId = null;
     }
+
+    resetTopGifter();
 }
 
 async function disconnect() {
@@ -89,39 +144,88 @@ async function connect(rawUsername) {
     });
 
     live.on(WebcastEvent.GIFT, (data) => {
-        // Streakable gifts (giftType 1) fire repeatedly while the streak is in
-        // progress; only the final event (repeatEnd) carries the true count.
-        if (data.giftDetails?.giftType === 1 && !data.repeatEnd) return;
+        const user = deriveUserInfo(data);
 
-        const unitDiamonds = data.extendedGiftInfo?.diamondCount ?? data.giftDetails?.diamondCount ?? 0;
-        const diamonds = unitDiamonds * (data.repeatCount || 1);
+        // Streakable gifts (gift.type === 1) fire repeatedly while the combo
+        // is in progress; only the final tick (repeatEnd === 1) carries the
+        // true total, so intermediate ticks are skipped here.
+        const isStreakable = data.gift?.type === 1;
+        if (isStreakable && data.repeatEnd !== 1) return;
+
+        const unitDiamonds = data.gift?.diamondCount ?? data.extendedGiftInfo?.diamondCount ?? 0;
+        const repeatCount = data.repeatCount || 1;
+        const diamonds = unitDiamonds * repeatCount;
+        const giftName = data.gift?.name || data.extendedGiftInfo?.name || 'Gift';
 
         statsStore.recordGift(currentSessionId, {
-            uniqueId: data.user?.uniqueId,
-            nickname: data.user?.nickname,
+            uniqueId: user.uniqueId,
+            nickname: user.nickname,
             diamonds,
-            giftName: data.giftDetails?.giftName || data.extendedGiftInfo?.name || 'Gift',
+            giftName,
+        });
+
+        recordTopGifter(user.uniqueId, diamonds);
+
+        emitLiveEvent({
+            type: 'gift',
+            user,
+            giftId: data.gift?.id,
+            giftName,
+            diamonds,
+            repeatCount,
+            comboCount: data.comboCount,
         });
     });
 
     live.on(WebcastEvent.FOLLOW, (data) => {
+        const user = deriveUserInfo(data);
+
         statsStore.recordFollow(currentSessionId, {
-            uniqueId: data.user?.uniqueId,
-            nickname: data.user?.nickname,
+            uniqueId: user.uniqueId,
+            nickname: user.nickname,
         });
+
+        emitLiveEvent({ type: 'follow', user });
     });
 
     live.on(WebcastEvent.SHARE, (data) => {
+        const user = deriveUserInfo(data);
+
         statsStore.recordShare(currentSessionId, {
-            uniqueId: data.user?.uniqueId,
-            nickname: data.user?.nickname,
+            uniqueId: user.uniqueId,
+            nickname: user.nickname,
         });
+
+        emitLiveEvent({ type: 'share', user });
+    });
+
+    live.on(WebcastEvent.CHAT, (data) => {
+        emitLiveEvent({ type: 'chat', user: deriveUserInfo(data), content: data.content });
+    });
+
+    live.on(WebcastEvent.LIKE, (data) => {
+        emitLiveEvent({ type: 'like', user: deriveUserInfo(data), count: data.count, total: data.total });
+    });
+
+    live.on(WebcastEvent.MEMBER, (data) => {
+        const user = deriveUserInfo(data);
+
+        // MemberMessageAction 3 = MEMBER_MESSAGE_ACTION_SUBSCRIBED; every
+        // other action (1 = joined, plus assorted rarer ones) is treated as
+        // a room join since that's the only other case triggers care about.
+        if (data.action === 3) {
+            emitLiveEvent({ type: 'subscribe', user, memberCount: data.memberCount });
+            return;
+        }
+
+        emitLiveEvent({ type: 'join', user, memberCount: data.memberCount });
     });
 
     try {
         await live.connect();
         connection = live;
         currentSessionId = statsStore.startSession(username);
+        resetTopGifter();
         setState({ status: 'connected', username, error: null });
 
         return getState();
@@ -139,4 +243,4 @@ async function connect(rawUsername) {
     }
 }
 
-module.exports = { connect, disconnect, getState, onStateChange };
+module.exports = { connect, disconnect, getState, onStateChange, onLiveEvent, getTopGifterUniqueId };

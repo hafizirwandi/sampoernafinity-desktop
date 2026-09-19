@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Overlay</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: transparent; overflow: hidden; font-family: sans-serif; }
+  #stage { position: relative; width: 100%; height: 100%; }
+  .item { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.4s ease; }
+  .item.visible { opacity: 1; }
+  .item img, .item video { max-width: 90%; max-height: 90%; object-fit: contain; }
+  .alert-text { color: #fff; font-size: 28px; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8); text-align: center; padding: 16px 24px; background: rgba(0, 0, 0, 0.35); border-radius: 12px; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+(function () {
+    const params = new URLSearchParams(location.search);
+    const screen = params.get('screen');
+    const token = params.get('token');
+    const stage = document.getElementById('stage');
+
+    let ws = null;
+
+    function connect() {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${proto}://${location.host}/ws?screen=${encodeURIComponent(screen)}&token=${encodeURIComponent(token)}`);
+
+        ws.addEventListener('message', (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'trigger') handleTrigger(msg);
+            } catch {
+                // Ignore malformed messages.
+            }
+        });
+
+        ws.addEventListener('close', () => setTimeout(connect, 3000));
+        ws.addEventListener('error', () => ws.close());
+    }
+
+    function sendDone(id) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'done', id }));
+        }
+    }
+
+    function handleTrigger(msg) {
+        const el = document.createElement('div');
+        el.className = 'item';
+        stage.innerHTML = '';
+        stage.appendChild(el);
+
+        const durationMs = (msg.durationSeconds || 8) * 1000;
+        const fade = msg.fadeInOut !== false;
+
+        if (msg.media) {
+            const mediaEl = document.createElement(msg.media.mediaType === 'video' ? 'video' : 'img');
+            mediaEl.src = msg.media.url;
+            if (msg.media.mediaType === 'video') {
+                mediaEl.autoplay = true;
+                mediaEl.volume = Math.min(1, Math.max(0, (msg.media.volume ?? 100) / 100));
+            }
+            el.appendChild(mediaEl);
+        }
+
+        if (msg.alert) {
+            const alertEl = document.createElement('div');
+            alertEl.className = 'alert-text';
+            alertEl.textContent = msg.alert.text;
+            el.appendChild(alertEl);
+        }
+
+        if (msg.audio) {
+            const audioEl = new Audio(msg.audio.url);
+            audioEl.volume = Math.min(1, Math.max(0, (msg.audio.volume ?? 100) / 100));
+            audioEl.play().catch(() => {});
+        }
+
+        if (msg.tts && 'speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(msg.tts.message);
+            utterance.volume = Math.min(1, Math.max(0, (msg.tts.volume ?? 100) / 100));
+            window.speechSynthesis.speak(utterance);
+        }
+
+        requestAnimationFrame(() => el.classList.add('visible'));
+
+        setTimeout(() => {
+            if (fade) el.classList.remove('visible');
+            setTimeout(() => {
+                el.remove();
+                sendDone(msg.id);
+            }, fade ? 400 : 0);
+        }, durationMs);
+    }
+
+    connect();
+})();
+</script>
+</body>
+</html>

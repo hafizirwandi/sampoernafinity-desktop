@@ -57,18 +57,25 @@ function extensionFor(url, contentType) {
  * live, art loads instantly from disk instead of waiting on a remote CDN.
  */
 async function downloadImage(url, fileKey) {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Gagal mengunduh gambar (${response.status})`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) {
+            throw new Error(`Gagal mengunduh gambar (${response.status})`);
+        }
+
+        const ext = extensionFor(url, response.headers.get('content-type'));
+        const filePath = path.join(imagesDir(), `${fileKey}.${ext}`);
+        const buffer = Buffer.from(await response.arrayBuffer());
+
+        fs.writeFileSync(filePath, buffer);
+
+        return filePath;
+    } finally {
+        clearTimeout(timeout);
     }
-
-    const ext = extensionFor(url, response.headers.get('content-type'));
-    const filePath = path.join(imagesDir(), `${fileKey}.${ext}`);
-    const buffer = Buffer.from(await response.arrayBuffer());
-
-    fs.writeFileSync(filePath, buffer);
-
-    return filePath;
 }
 
 module.exports = { getAll, save, downloadImage };
