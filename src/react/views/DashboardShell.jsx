@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useSidebar } from '../hooks/useSidebar.js';
 import { useActionPlayback } from '../hooks/useActionPlayback.js';
+import { useSoundboardPlayback } from '../hooks/useSoundboardPlayback.js';
+import { useTtsPlayback } from '../hooks/useTtsPlayback.js';
 import Sidebar from '../components/Sidebar.jsx';
 import Topbar from '../components/Topbar.jsx';
 import DashboardPanel from '../panels/DashboardPanel.jsx';
@@ -9,6 +11,9 @@ import GiftsPanel from '../panels/GiftsPanel.jsx';
 import ConnectionPanel from '../panels/ConnectionPanel.jsx';
 import PlaceholderPanel from '../panels/PlaceholderPanel.jsx';
 import AksiEventPanel from '../panels/aksiEvent/AksiEventPanel.jsx';
+import OverlayWidgetsPanel from '../panels/overlayWidgets/OverlayWidgetsPanel.jsx';
+import SoundboardPanel from '../panels/soundboard/SoundboardPanel.jsx';
+import TtsPanel from '../panels/tts/TtsPanel.jsx';
 
 const PANEL_TITLES = {
     dashboard: 'Dashboard',
@@ -17,6 +22,9 @@ const PANEL_TITLES = {
     balance: 'Saldo & Riwayat Transaksi',
     gifts: 'Gift & Stiker',
     'aksi-event': 'Aksi & Event',
+    overlay: 'Overlay',
+    soundboard: 'Suara',
+    tts: 'TTS / Baca Komentar',
     connection: 'Connection',
 };
 
@@ -24,6 +32,8 @@ export default function DashboardShell({ auth, theme }) {
     const sidebar = useSidebar();
     const [activePanel, setActivePanel] = useState('dashboard');
     useActionPlayback();
+    useSoundboardPlayback();
+    useTtsPlayback();
 
     function handleNavigate(panel) {
         setActivePanel(panel);
@@ -35,6 +45,9 @@ export default function DashboardShell({ auth, theme }) {
     else if (activePanel === 'analytics') panelContent = <AnalyticsPanel />;
     else if (activePanel === 'gifts') panelContent = <GiftsPanel />;
     else if (activePanel === 'aksi-event') panelContent = <AksiEventPanel />;
+    else if (activePanel === 'overlay') panelContent = <OverlayWidgetsPanel />;
+    else if (activePanel === 'soundboard') panelContent = <SoundboardPanel />;
+    else if (activePanel === 'tts') panelContent = <TtsPanel />;
     else if (activePanel === 'connection') panelContent = <ConnectionPanel />;
     else panelContent = <PlaceholderPanel />;
 

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { ClipboardDocumentIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 export default function OverlaySettings() {
     const [settings, setSettings] = useState(null);
     const [newScreenName, setNewScreenName] = useState('');
     const [statusByScreen, setStatusByScreen] = useState({});
+    const [copiedScreenId, setCopiedScreenId] = useState(null);
 
     useEffect(() => {
         window.api.overlay.getSettings().then(setSettings);
@@ -55,7 +57,11 @@ export default function OverlaySettings() {
 
     async function copyUrl(screen) {
         const url = screenUrl(screen);
-        if (url) await navigator.clipboard.writeText(url);
+        if (!url) return;
+
+        await navigator.clipboard.writeText(url);
+        setCopiedScreenId(screen.id);
+        setTimeout(() => setCopiedScreenId((current) => (current === screen.id ? null : current)), 1500);
     }
 
     return (
@@ -106,7 +112,7 @@ export default function OverlaySettings() {
                     <thead>
                         <tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
                             <th className="py-2 px-4 font-medium">Nama Layar</th>
-                            <th className="py-2 px-4 font-medium">URL Layar (widget untuk OBS / Live Studio)</th>
+                            <th className="py-2 px-4 font-medium">Link</th>
                             <th className="py-2 px-4 font-medium">Maks. panjang antrian</th>
                             <th className="py-2 px-4 font-medium">Status</th>
                             <th className="py-2 px-4 font-medium"></th>
@@ -118,16 +124,24 @@ export default function OverlaySettings() {
                                 <td className="py-2 px-4">{screen.name}</td>
                                 <td className="py-2 px-4">
                                     {screenUrl(screen) ? (
-                                        <div className="flex items-center gap-2">
-                                            <span className="truncate text-xs text-text-muted">{screenUrl(screen)}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => copyUrl(screen)}
-                                                className="shrink-0 rounded-lg border border-border px-2 py-1 text-xs hover:bg-surface-alt"
-                                            >
-                                                Copy link
-                                            </button>
-                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => copyUrl(screen)}
+                                            title={screenUrl(screen)}
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-surface-alt"
+                                        >
+                                            {copiedScreenId === screen.id ? (
+                                                <>
+                                                    <CheckIcon className="h-3.5 w-3.5 text-green-600" />
+                                                    Tersalin
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                                                    Copy link
+                                                </>
+                                            )}
+                                        </button>
                                     ) : (
                                         <span className="text-xs text-text-muted">-</span>
                                     )}
@@ -138,8 +152,13 @@ export default function OverlaySettings() {
                                 </td>
                                 <td className="py-2 px-4 text-right">
                                     {settings.screens.length > 1 && (
-                                        <button type="button" onClick={() => removeScreen(screen.id)} className="text-xs text-primary-600 hover:text-primary-700">
-                                            Hapus
+                                        <button
+                                            type="button"
+                                            onClick={() => removeScreen(screen.id)}
+                                            title="Hapus"
+                                            className="rounded-lg p-1.5 text-primary-600 hover:bg-surface-alt hover:text-primary-700"
+                                        >
+                                            <TrashIcon className="h-4 w-4" />
                                         </button>
                                     )}
                                 </td>

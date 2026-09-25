@@ -1,4 +1,6 @@
-function FileOrUrlPicker({ value, onChange, kind }) {
+import SoundSourcePicker from '../../components/SoundSourcePicker.jsx';
+
+export function FileOrUrlPicker({ value, onChange, kind, extraButton }) {
     async function pickFile() {
         const result = await window.api.actions.pickMedia(kind);
         if (result) onChange({ source: 'file', filePath: result.filePath, fileName: result.originalName });
@@ -10,6 +12,7 @@ function FileOrUrlPicker({ value, onChange, kind }) {
                 <button type="button" onClick={pickFile} className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-alt">
                     Pilih berkas
                 </button>
+                {extraButton}
                 {value.source === 'file' && value.fileName && <span className="truncate text-xs text-text-muted">{value.fileName}</span>}
             </div>
             <p className="text-xs text-text-muted">atau URL</p>
@@ -24,7 +27,7 @@ function FileOrUrlPicker({ value, onChange, kind }) {
     );
 }
 
-function VolumeSlider({ value, onChange, label = 'Volume' }) {
+export function VolumeSlider({ value, onChange, label = 'Volume' }) {
     return (
         <div className="mt-3">
             <label className="mb-1 block text-xs font-medium text-text-muted">
@@ -38,7 +41,7 @@ function VolumeSlider({ value, onChange, label = 'Volume' }) {
 function PlayAudioFields({ value, onChange }) {
     return (
         <div>
-            <FileOrUrlPicker value={value} onChange={onChange} kind="audio" />
+            <SoundSourcePicker value={value} onChange={onChange} />
             <VolumeSlider value={value.volume ?? 80} onChange={(volume) => onChange({ volume })} />
         </div>
     );

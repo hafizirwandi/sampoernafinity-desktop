@@ -1,3 +1,5 @@
+import { BoltIcon, Squares2X2Icon, SpeakerWaveIcon, MicrophoneIcon } from '@heroicons/react/24/outline';
+
 const NAV_SECTIONS = [
     {
         label: 'Selamat Datang',
@@ -36,7 +38,22 @@ const NAV_SECTIONS = [
             {
                 key: 'aksi-event',
                 title: 'Aksi',
-                path: 'M3.75 13.5 9 3l1.5 9L11.25 21 3.75 13.5Zm7.5 0h9',
+                icon: BoltIcon,
+            },
+            {
+                key: 'overlay',
+                title: 'Overlay',
+                icon: Squares2X2Icon,
+            },
+            {
+                key: 'soundboard',
+                title: 'Suara',
+                icon: SpeakerWaveIcon,
+            },
+            {
+                key: 'tts',
+                title: 'TTS',
+                icon: MicrophoneIcon,
             },
         ],
     },
@@ -109,9 +126,13 @@ export default function Sidebar({ activePanel, onNavigate, collapsed, onToggleCo
                                             active ? 'bg-primary-600 text-white' : 'text-text-muted'
                                         } ${collapsed ? 'lg:justify-center lg:px-2' : ''}`}
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={item.fill ? 'currentColor' : 'none'} stroke={item.fill ? undefined : 'currentColor'} strokeWidth={item.fill ? undefined : '1.5'} className="h-5 w-5 shrink-0">
-                                            {item.fill ? <path d={item.path} /> : <path strokeLinecap="round" strokeLinejoin="round" d={item.path} />}
-                                        </svg>
+                                        {item.icon ? (
+                                            <item.icon className="h-5 w-5 shrink-0" />
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={item.fill ? 'currentColor' : 'none'} stroke={item.fill ? undefined : 'currentColor'} strokeWidth={item.fill ? undefined : '1.5'} className="h-5 w-5 shrink-0">
+                                                {item.fill ? <path d={item.path} /> : <path strokeLinecap="round" strokeLinejoin="round" d={item.path} />}
+                                            </svg>
+                                        )}
                                         <span className={`nav-label truncate ${collapsed ? 'lg:hidden' : ''}`}>{item.title}</span>
                                     </button>
                                 );

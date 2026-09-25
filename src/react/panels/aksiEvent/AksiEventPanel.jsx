@@ -5,10 +5,15 @@ import OverlaySettings from './OverlaySettings.jsx';
 import MinecraftSettings from './MinecraftSettings.jsx';
 import ActionModal from './ActionModal.jsx';
 import EventModal from './EventModal.jsx';
+import SimulateEventPanel from './SimulateEventPanel.jsx';
+import Toast from '../../components/Toast.jsx';
+import PlaceholderPanel from '../PlaceholderPanel.jsx';
 
 const TABS = [
     { key: 'aksi', label: 'Aksi' },
     { key: 'event', label: 'Event' },
+    { key: 'simulate', label: 'Simulasi Event' },
+    { key: 'import', label: 'Import' },
     { key: 'overlay', label: 'Pengaturan Overlay' },
 ];
 
@@ -121,17 +126,6 @@ export default function AksiEventPanel() {
                         </button>
                     </div>
 
-                    {testResults && (
-                        <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
-                            <p className="mb-1 font-medium">Hasil tes aksi:</p>
-                            <ul className="list-inside list-disc space-y-0.5 text-text-muted">
-                                {testResults.map((result, index) => (
-                                    <li key={index}>{testResultLine(result)}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-
                     <ActionsTable
                         actions={actions}
                         screens={screens}
@@ -166,6 +160,10 @@ export default function AksiEventPanel() {
                 </div>
             )}
 
+            {tab === 'simulate' && <SimulateEventPanel />}
+
+            {tab === 'import' && <PlaceholderPanel />}
+
             {tab === 'overlay' && (
                 <div className="space-y-6">
                     <OverlaySettings />
@@ -189,6 +187,17 @@ export default function AksiEventPanel() {
                     onClose={() => setEventModal(null)}
                     onSaved={handleSavedEvent}
                 />
+            )}
+
+            {testResults && (
+                <Toast onDismiss={() => setTestResults(null)}>
+                    <p className="mb-1 font-medium">Hasil tes aksi:</p>
+                    <ul className="list-inside list-disc space-y-0.5 text-text-muted">
+                        {testResults.map((result, index) => (
+                            <li key={index}>{testResultLine(result)}</li>
+                        ))}
+                    </ul>
+                </Toast>
             )}
         </div>
     );

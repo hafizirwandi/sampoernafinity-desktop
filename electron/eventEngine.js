@@ -1,62 +1,12 @@
 const eventsStore = require('./eventsStore');
 const actionsStore = require('./actionsStore');
 const actionExecutor = require('./actionExecutor');
+const { matchesAudience, matchesTrigger, toRawContext } = require('./triggerMatcher');
 
 // In-memory only — cooldowns don't need to survive an app restart, and
 // resetting them on restart is the desired behavior anyway.
 const lastFiredGlobal = new Map(); // eventId -> timestamp
 const lastFiredPerViewer = new Map(); // `${eventId}:${uniqueId}` -> timestamp
-
-function matchesAudience(event, user, getTopGifterUniqueId) {
-    const audience = event.audience || { type: 'any' };
-    const uniqueId = (user.uniqueId || '').toLowerCase();
-
-    switch (audience.type) {
-        case 'any':
-            return true;
-        case 'follower':
-            return Boolean(user.isFollower);
-        case 'subscriber':
-            return Boolean(user.isSubscriber);
-        case 'moderator':
-            return Boolean(user.isModerator);
-        case 'top_gifter':
-            return Boolean(user.uniqueId) && user.uniqueId === getTopGifterUniqueId();
-        case 'specific':
-            return (audience.usernames || []).some((u) => u.toLowerCase() === uniqueId);
-        default:
-            return false;
-    }
-}
-
-// chat_keyword and gift_min_coin/gift_specific are refinements of the raw
-// 'chat'/'gift' live events, not distinct live-event types of their own —
-// they must be matched against the underlying type, not their own trigger
-// type string.
-function underlyingLiveEventType(triggerType) {
-    if (triggerType === 'chat_keyword') return 'chat';
-    if (triggerType === 'gift_min_coin' || triggerType === 'gift_specific') return 'gift';
-    return triggerType;
-}
-
-function matchesTrigger(event, liveEvent) {
-    const trigger = event.trigger || {};
-    if (underlyingLiveEventType(trigger.type) !== liveEvent.type) return false;
-
-    switch (trigger.type) {
-        case 'like':
-            return (liveEvent.count || 0) >= (trigger.minLikes || 1);
-        case 'chat_keyword':
-            return (liveEvent.content || '').toLowerCase().includes((trigger.keyword || '').toLowerCase());
-        case 'gift_min_coin':
-            return (liveEvent.diamonds || 0) >= (trigger.minCoins || 0);
-        case 'gift_specific':
-            return (trigger.giftIds || []).map(String).includes(String(liveEvent.giftId));
-        default:
-            // join / share / follow / subscribe / chat — no extra condition.
-            return true;
-    }
-}
 
 function checkCooldown(event, uniqueId) {
     const now = Date.now();
@@ -96,20 +46,55 @@ function resolveActions(event) {
     return resolved;
 }
 
-function toRawContext(liveEvent) {
-    return {
-        nickname: liveEvent.user?.nickname,
-        username: liveEvent.user?.uniqueId,
-        giftName: liveEvent.giftName,
-        count: liveEvent.repeatCount ?? liveEvent.count,
-        repeatCount: liveEvent.repeatCount,
-        coins: liveEvent.diamonds,
-        comment: liveEvent.content,
-        likeCount: liveEvent.count,
-    };
+// Core matching pipeline, shared by the live TikTok event stream and by
+// manual "Simulasi Event" runs from the UI — a report entry is only
+// produced for Events whose trigger *type* matches (chat_keyword only cares
+// about chat events, etc.); everything else is silently irrelevant to this
+// liveEvent and not worth reporting on.
+async function processLiveEvent(liveEvent, deps) {
+    const { tiktokConnection, overlayServer, overlayStore, getWebContents, toAssetUrl } = deps;
+    const events = eventsStore.list().filter((e) => e.enabled);
+    const user = liveEvent.user || {};
+    const report = [];
+
+    for (const event of events) {
+        if (!matchesTrigger(event, liveEvent)) continue;
+
+        if (!matchesAudience(event, user, tiktokConnection.getTopGifterUniqueId)) {
+            report.push({ eventId: event.id, eventName: event.name, matched: false, reason: 'audience' });
+            continue;
+        }
+
+        if (!checkCooldown(event, user.uniqueId)) {
+            report.push({ eventId: event.id, eventName: event.name, matched: false, reason: 'cooldown' });
+            continue;
+        }
+
+        markFired(event, user.uniqueId);
+
+        const rawContext = toRawContext(liveEvent);
+        const overlaySettings = overlayStore.getSettings();
+        const actionsRun = [];
+
+        for (const action of resolveActions(event)) {
+            const results = await actionExecutor.run(action, rawContext, {
+                webContents: getWebContents(),
+                toAssetUrl,
+                overlayServer,
+                overlayThroughOverlay: overlaySettings.playAudioThroughOverlay,
+                screenConnected: action.screenId ? overlayServer.isScreenConnected(action.screenId) : false,
+            });
+            actionsRun.push({ actionId: action.id, actionName: action.name, results });
+        }
+
+        report.push({ eventId: event.id, eventName: event.name, matched: true, actionsRun });
+    }
+
+    return report;
 }
 
 let started = false;
+let engineDeps = null;
 
 // deps: { tiktokConnection, overlayServer, overlayStore, getWebContents,
 // toAssetUrl } — injected rather than required directly so this module
@@ -117,34 +102,19 @@ let started = false;
 function start(deps) {
     if (started) return;
     started = true;
+    engineDeps = deps;
 
-    const { tiktokConnection, overlayServer, overlayStore, getWebContents, toAssetUrl } = deps;
-
-    tiktokConnection.onLiveEvent(async (liveEvent) => {
-        const events = eventsStore.list().filter((e) => e.enabled);
-        const user = liveEvent.user || {};
-
-        for (const event of events) {
-            if (!matchesTrigger(event, liveEvent)) continue;
-            if (!matchesAudience(event, user, tiktokConnection.getTopGifterUniqueId)) continue;
-            if (!checkCooldown(event, user.uniqueId)) continue;
-
-            markFired(event, user.uniqueId);
-
-            const rawContext = toRawContext(liveEvent);
-            const overlaySettings = overlayStore.getSettings();
-
-            for (const action of resolveActions(event)) {
-                await actionExecutor.run(action, rawContext, {
-                    webContents: getWebContents(),
-                    toAssetUrl,
-                    overlayServer,
-                    overlayThroughOverlay: overlaySettings.playAudioThroughOverlay,
-                    screenConnected: action.screenId ? overlayServer.isScreenConnected(action.screenId) : false,
-                });
-            }
-        }
+    deps.tiktokConnection.onLiveEvent((liveEvent) => {
+        processLiveEvent(liveEvent, deps).catch((error) => console.error('eventEngine error:', error));
     });
 }
 
-module.exports = { start };
+// Runs a synthetic liveEvent through the exact same matching + execution
+// pipeline as the real TikTok stream — used by the "Simulasi Event" panel
+// so Events/Aksi can be tested without actually being live.
+function simulate(liveEvent) {
+    if (!engineDeps) throw new Error('Event engine belum aktif.');
+    return processLiveEvent(liveEvent, engineDeps);
+}
+
+module.exports = { start, simulate };

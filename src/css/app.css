@@ -49,3 +49,33 @@ html,
 body {
     height: 100%;
 }
+
+/* Thin, theme-matched scrollbar — replaces the default OS scrollbar (a
+   jarring light-gray classic style with arrow buttons on Windows) that
+   otherwise shows through everywhere, dark theme included. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ui-border) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--ui-border);
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ui-text-muted);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}

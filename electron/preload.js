@@ -58,6 +58,10 @@ contextBridge.exposeInMainWorld('api', {
             return () => ipcRenderer.removeListener('actions:speak-local', listener);
         },
     },
+    sounds: {
+        search: (query, page) => ipcRenderer.invoke('sounds:search', query, page),
+        trending: (page) => ipcRenderer.invoke('sounds:trending', page),
+    },
     events: {
         list: () => ipcRenderer.invoke('events:list'),
         create: (payload) => ipcRenderer.invoke('events:create', payload),
@@ -65,6 +69,7 @@ contextBridge.exposeInMainWorld('api', {
         remove: (id) => ipcRenderer.invoke('events:remove', id),
         duplicate: (id) => ipcRenderer.invoke('events:duplicate', id),
         toggle: (id) => ipcRenderer.invoke('events:toggle', id),
+        simulate: (liveEvent) => ipcRenderer.invoke('events:simulate', liveEvent),
     },
     overlay: {
         getSettings: () => ipcRenderer.invoke('overlay:get-settings'),
@@ -84,5 +89,43 @@ contextBridge.exposeInMainWorld('api', {
         getSettings: () => ipcRenderer.invoke('minecraft:get-settings'),
         saveSettings: (payload) => ipcRenderer.invoke('minecraft:save-settings', payload),
         testConnection: () => ipcRenderer.invoke('minecraft:test-connection'),
+    },
+    soundboard: {
+        list: () => ipcRenderer.invoke('soundboard:list'),
+        getGlobalEnabled: () => ipcRenderer.invoke('soundboard:get-global-enabled'),
+        setGlobalEnabled: (enabled) => ipcRenderer.invoke('soundboard:set-global-enabled', enabled),
+        create: (payload) => ipcRenderer.invoke('soundboard:create', payload),
+        update: (id, payload) => ipcRenderer.invoke('soundboard:update', id, payload),
+        remove: (id) => ipcRenderer.invoke('soundboard:remove', id),
+        toggle: (id) => ipcRenderer.invoke('soundboard:toggle', id),
+        test: (id) => ipcRenderer.invoke('soundboard:test', id),
+        stopAll: () => ipcRenderer.invoke('soundboard:stop-all'),
+        onPlay: (callback) => {
+            const listener = (_event, payload) => callback(payload);
+            ipcRenderer.on('soundboard:play', listener);
+
+            return () => ipcRenderer.removeListener('soundboard:play', listener);
+        },
+        onStopAll: (callback) => {
+            const listener = () => callback();
+            ipcRenderer.on('soundboard:stop-all', listener);
+
+            return () => ipcRenderer.removeListener('soundboard:stop-all', listener);
+        },
+    },
+    tts: {
+        getSettings: () => ipcRenderer.invoke('tts:get-settings'),
+        updateSettings: (payload) => ipcRenderer.invoke('tts:update-settings', payload),
+        listUsers: () => ipcRenderer.invoke('tts:list-users'),
+        addUser: (payload) => ipcRenderer.invoke('tts:add-user', payload),
+        updateUser: (id, payload) => ipcRenderer.invoke('tts:update-user', id, payload),
+        removeUser: (id) => ipcRenderer.invoke('tts:remove-user', id),
+        testGoogle: (payload) => ipcRenderer.invoke('tts:test-google', payload),
+        onSpeak: (callback) => {
+            const listener = (_event, payload) => callback(payload);
+            ipcRenderer.on('tts:speak', listener);
+
+            return () => ipcRenderer.removeListener('tts:speak', listener);
+        },
     },
 });

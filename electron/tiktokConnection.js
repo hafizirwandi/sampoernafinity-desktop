@@ -66,6 +66,20 @@ function getTopGifterUniqueId() {
     return topGifterId;
 }
 
+// 1-based rank of a viewer among this session's gifters by total diamonds
+// (1 = the single top gifter), or null if they haven't gifted at all —
+// used for "minimum top gifter rank" style checks (e.g. TTS access for the
+// top 3 gifters), not just the single #1 spot that getTopGifterUniqueId()
+// answers.
+function getGifterRank(uniqueId) {
+    if (!uniqueId || !topGifterTotals.has(uniqueId)) return null;
+
+    const sorted = [...topGifterTotals.entries()].sort((a, b) => b[1] - a[1]);
+    const index = sorted.findIndex(([id]) => id === uniqueId);
+
+    return index === -1 ? null : index + 1;
+}
+
 // The modern TikTokLiveConnection payloads expose user identity via
 // `user.displayId` (not `user.uniqueId`, which only existed on the
 // deprecated legacy client) and role flags via `userIdentity` on chat/gift
@@ -81,6 +95,11 @@ function deriveUserInfo(data) {
         isFollower: identity ? !!identity.isFollowerOfAnchor : !!user.isFollower,
         isSubscriber: identity ? !!identity.isSubscriberOfAnchor : !!user.subscribeInfo?.isSubscribe,
         isModerator: identity ? !!identity.isModeratorOfAnchor : !!user.userAttr?.isAdmin,
+        // "Friend" = mutual follow. userIdentity carries this directly on
+        // chat/gift; other event types fall back to the raw follow flags.
+        isFriend: identity ? !!identity.isMutualFollowingWithAnchor : !!(user.isFollower && user.isFollowing),
+        // fansLevel comes through as a string on the proto message.
+        teamLevel: Number(user.fansClubInfo?.fansLevel) || 0,
     };
 }
 
@@ -243,4 +262,4 @@ async function connect(rawUsername) {
     }
 }
 
-module.exports = { connect, disconnect, getState, onStateChange, onLiveEvent, getTopGifterUniqueId };
+module.exports = { connect, disconnect, getState, onStateChange, onLiveEvent, getTopGifterUniqueId, getGifterRank };

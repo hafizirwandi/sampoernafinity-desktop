@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, net, protocol, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, net, protocol, shell, dialog, globalShortcut } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { saveToken, loadToken, clearToken } = require('./tokenStore');
@@ -12,6 +12,12 @@ const minecraftStore = require('./minecraftStore');
 const overlayServer = require('./overlayServer');
 const actionExecutor = require('./actionExecutor');
 const eventEngine = require('./eventEngine');
+const soundLibrary = require('./soundLibrary');
+const soundsStore = require('./soundsStore');
+const soundboardEngine = require('./soundboardEngine');
+const ttsStore = require('./ttsStore');
+const ttsEngine = require('./ttsEngine');
+const googleTts = require('./googleTts');
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
 const DESKTOP_SCHEME = process.env.DESKTOP_APP_SCHEME || 'sampoernafinity';
@@ -150,6 +156,18 @@ if (!gotLock) {
             toAssetUrl,
         });
 
+        soundboardEngine.start({
+            tiktokConnection,
+            getWebContents: () => mainWindow?.webContents,
+            toAssetUrl,
+        });
+
+        ttsEngine.start({
+            tiktokConnection,
+            getWebContents: () => mainWindow?.webContents,
+            toAssetUrl,
+        });
+
         createWindow();
 
         if (pendingDeepLinkUrl) {
@@ -171,6 +189,7 @@ if (!gotLock) {
         tiktokConnection.disconnect();
         statsStore.flush();
         overlayServer.stop();
+        globalShortcut.unregisterAll();
     });
 }
 
@@ -377,6 +396,9 @@ ipcMain.handle('actions:pick-media', async (_event, kind) => {
     return { filePath, originalName: path.basename(originalPath) };
 });
 
+ipcMain.handle('sounds:search', (_event, query, page) => soundLibrary.search(query, page));
+ipcMain.handle('sounds:trending', (_event, page) => soundLibrary.trending(page));
+
 // Runs an Aksi against a synthetic sample context so it can be tested from
 // the Aksi table without needing a real TikTok LIVE event to trigger it.
 ipcMain.handle('actions:run', async (_event, id) => {
@@ -414,6 +436,10 @@ ipcMain.handle('events:remove', (_event, id) => eventsStore.remove(id));
 ipcMain.handle('events:duplicate', (_event, id) => eventsStore.duplicate(id));
 ipcMain.handle('events:toggle', (_event, id) => eventsStore.toggle(id));
 
+// Feeds a synthetic liveEvent through the real matching + execution
+// pipeline, for the "Simulasi Event" panel.
+ipcMain.handle('events:simulate', (_event, liveEvent) => eventEngine.simulate(liveEvent));
+
 // --- Overlay (local OBS/Live Studio browser-source server) -------------
 
 ipcMain.handle('overlay:get-settings', () => overlayStore.getSettings());
@@ -428,3 +454,57 @@ ipcMain.handle('overlay:remove-screen', (_event, id) => overlayStore.removeScree
 ipcMain.handle('minecraft:get-settings', () => minecraftStore.getSettings());
 ipcMain.handle('minecraft:save-settings', (_event, payload) => minecraftStore.saveSettings(payload));
 ipcMain.handle('minecraft:test-connection', () => minecraftStore.testConnection());
+
+// --- Suara (sound notifications: TikTok-event trigger and/or global hotkey) --
+
+ipcMain.handle('soundboard:list', () => soundsStore.list());
+ipcMain.handle('soundboard:get-global-enabled', () => soundsStore.getGlobalEnabled());
+
+ipcMain.handle('soundboard:set-global-enabled', (_event, enabled) => {
+    const result = soundsStore.setGlobalEnabled(enabled);
+    soundboardEngine.syncShortcuts();
+    return result;
+});
+
+ipcMain.handle('soundboard:create', (_event, payload) => {
+    const created = soundsStore.create(payload);
+    soundboardEngine.syncShortcuts();
+    return created;
+});
+
+ipcMain.handle('soundboard:update', (_event, id, payload) => {
+    const updated = soundsStore.update(id, payload);
+    soundboardEngine.syncShortcuts();
+    return updated;
+});
+
+ipcMain.handle('soundboard:remove', (_event, id) => {
+    soundsStore.remove(id);
+    soundboardEngine.syncShortcuts();
+});
+
+ipcMain.handle('soundboard:toggle', (_event, id) => {
+    const toggled = soundsStore.toggle(id);
+    soundboardEngine.syncShortcuts();
+    return toggled;
+});
+
+ipcMain.handle('soundboard:test', (_event, id) => soundboardEngine.testPlay(id));
+ipcMain.handle('soundboard:stop-all', () => soundboardEngine.stopAll());
+
+// --- TTS / Baca Komentar ------------------------------------------------
+
+ipcMain.handle('tts:get-settings', () => ttsStore.getSettings());
+ipcMain.handle('tts:update-settings', (_event, payload) => ttsStore.updateSettings(payload));
+ipcMain.handle('tts:list-users', () => ttsStore.listUsers());
+ipcMain.handle('tts:add-user', (_event, payload) => ttsStore.addUser(payload));
+ipcMain.handle('tts:update-user', (_event, id, payload) => ttsStore.updateUser(id, payload));
+ipcMain.handle('tts:remove-user', (_event, id) => ttsStore.removeUser(id));
+
+// Used by the "Tester" Play button when Sumber Suara = Google — same
+// fetch-to-local-file path as the live pipeline, since a raw Google URL
+// loaded directly from the renderer gets 404'd (foreign Referer header).
+ipcMain.handle('tts:test-google', async (_event, { text, lang }) => {
+    const filePaths = await googleTts.synthesizeToFiles(text, lang);
+    return filePaths.map((p) => toAssetUrl(p));
+});

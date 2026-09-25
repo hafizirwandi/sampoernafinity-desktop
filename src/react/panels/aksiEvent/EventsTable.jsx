@@ -1,3 +1,6 @@
+import { PencilSquareIcon, DocumentDuplicateIcon, TrashIcon } from '@heroicons/react/24/outline';
+import RowIconButton from '../../components/RowIconButton.jsx';
+import ToggleSwitch from '../../components/ToggleSwitch.jsx';
 import { AUDIENCE_LABELS, TRIGGER_LABELS } from './constants.js';
 
 export default function EventsTable({ events, actions, onEdit, onToggle, onDuplicate, onRemove }) {
@@ -12,7 +15,7 @@ export default function EventsTable({ events, actions, onEdit, onToggle, onDupli
             <table className="w-full text-left text-sm">
                 <thead>
                     <tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
-                        <th className="py-2 px-4 font-medium">Pada</th>
+                        <th className="py-2 px-4 font-medium">Status</th>
                         <th className="py-2 px-4 font-medium">Pengguna</th>
                         <th className="py-2 px-4 font-medium">Pemicu</th>
                         <th className="py-2 px-4 font-medium">Aksi</th>
@@ -30,26 +33,27 @@ export default function EventsTable({ events, actions, onEdit, onToggle, onDupli
                         events.map((event) => (
                             <tr key={event.id} className="border-b border-border last:border-0">
                                 <td className="py-2 px-4">
-                                    <input
-                                        type="checkbox"
+                                    <ToggleSwitch
                                         checked={event.enabled}
                                         onChange={() => onToggle(event.id)}
-                                        className="rounded border-border text-primary-600 focus:ring-primary-600"
+                                        title={event.enabled ? 'Aktif' : 'Non-aktif'}
                                     />
                                 </td>
                                 <td className="py-2 px-4">{AUDIENCE_LABELS[event.audience?.type] || event.audience?.type}</td>
                                 <td className="py-2 px-4">{event.name || TRIGGER_LABELS[event.trigger?.type] || event.trigger?.type}</td>
                                 <td className="py-2 px-4">{actionNames(event)}</td>
-                                <td className="py-2 px-4 text-right">
-                                    <button type="button" onClick={() => onEdit(event)} className="text-xs text-text-muted hover:text-text">
-                                        Ubah
-                                    </button>
-                                    <button type="button" onClick={() => onDuplicate(event.id)} className="ml-3 text-xs text-text-muted hover:text-text">
-                                        Duplikat
-                                    </button>
-                                    <button type="button" onClick={() => onRemove(event.id)} className="ml-3 text-xs text-primary-600 hover:text-primary-700">
-                                        Hapus
-                                    </button>
+                                <td className="py-2 px-4">
+                                    <div className="flex items-center justify-end gap-1">
+                                        <RowIconButton onClick={() => onEdit(event)} title="Ubah">
+                                            <PencilSquareIcon className="h-4 w-4" />
+                                        </RowIconButton>
+                                        <RowIconButton onClick={() => onDuplicate(event.id)} title="Duplikat">
+                                            <DocumentDuplicateIcon className="h-4 w-4" />
+                                        </RowIconButton>
+                                        <RowIconButton onClick={() => onRemove(event.id)} title="Hapus" tone="danger">
+                                            <TrashIcon className="h-4 w-4" />
+                                        </RowIconButton>
+                                    </div>
                                 </td>
                             </tr>
                         ))

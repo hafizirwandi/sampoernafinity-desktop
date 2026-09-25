@@ -102,6 +102,20 @@ async function runMinecraftCommand(behavior, ctx) {
     }
 }
 
+// show_media/show_alert have no local fallback — they only mean something
+// on an Overlay Screen. The payload is still queued either way (so it plays
+// the moment OBS/a browser connects), but the reported result must say so
+// honestly rather than claiming success when nobody is actually watching.
+function overlayConnectivityResult(type, screenConnected) {
+    if (screenConnected) return { type };
+
+    return {
+        type,
+        skipped: true,
+        reason: 'Layar Overlay belum terhubung — buka URL overlay-nya di OBS/browser dulu. Sudah masuk antrian dan akan tampil begitu Layar terhubung.',
+    };
+}
+
 // Fallback for audio/TTS when no Overlay Screen is listening — plays back
 // in this app's own window instead, mirroring the mockup's own "layar tanpa
 // overlay tetap diputar di aplikasi" text so a gift's sound is never lost.
@@ -157,7 +171,7 @@ async function run(action, rawContext, deps = {}) {
                 }
                 overlayPayload.media = { mediaType: behavior.mediaType, url, volume: behavior.volume ?? 100 };
                 hasOverlayContent = true;
-                results.push({ type: behavior.type });
+                results.push(overlayConnectivityResult(behavior.type, screenConnected));
                 continue;
             }
 
@@ -169,7 +183,7 @@ async function run(action, rawContext, deps = {}) {
                 }
                 overlayPayload.alert = { text };
                 hasOverlayContent = true;
-                results.push({ type: behavior.type });
+                results.push(overlayConnectivityResult(behavior.type, screenConnected));
                 continue;
             }
 

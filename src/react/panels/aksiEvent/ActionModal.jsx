@@ -34,6 +34,31 @@ function defaultBehaviorConfig(type) {
     }
 }
 
+// Each behavior type has its own idea of "empty" (a file/URL pair, a line
+// list, plain text, ...), so it needs its own required-field check rather
+// than a single generic emptiness test.
+function validateBehavior(behavior) {
+    switch (behavior.type) {
+        case 'play_audio':
+        case 'show_media': {
+            const value = behavior.source === 'url' ? behavior.url : behavior.filePath;
+            return value && value.trim() ? null : 'Pilih berkas atau isi URL.';
+        }
+        case 'tts':
+            return behavior.message && behavior.message.trim() ? null : 'Isi pesan yang akan dibaca.';
+        case 'show_alert':
+            return behavior.text && behavior.text.trim() ? null : 'Isi teks peringatan.';
+        case 'webhook':
+            return behavior.url && behavior.url.trim() ? null : 'Isi URL webhook.';
+        case 'keystroke':
+            return behavior.keys && behavior.keys.trim() ? null : 'Isi tombol yang akan ditekan.';
+        case 'minecraft_command':
+            return (behavior.lines || []).some((line) => line.trim()) ? null : 'Isi minimal satu perintah.';
+        default:
+            return null;
+    }
+}
+
 const DEFAULT_FORM = {
     name: '',
     behaviors: [],
@@ -55,10 +80,20 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
         screenId: action?.screenId || screens[0]?.id || '',
     }));
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState('');
+    const [submitError, setSubmitError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
 
     function patch(fields) {
         setForm((prev) => ({ ...prev, ...fields }));
+    }
+
+    function clearFieldError(key) {
+        setFieldErrors((prev) => {
+            if (!(key in prev)) return prev;
+            const next = { ...prev };
+            delete next[key];
+            return next;
+        });
     }
 
     function isChecked(type) {
@@ -69,25 +104,43 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
         patch({
             behaviors: isChecked(type) ? form.behaviors.filter((b) => b.type !== type) : [...form.behaviors, defaultBehaviorConfig(type)],
         });
+        clearFieldError(type);
+        clearFieldError('behaviors');
     }
 
     function updateBehavior(type, fields) {
         patch({ behaviors: form.behaviors.map((b) => (b.type === type ? { ...b, ...fields } : b)) });
+        clearFieldError(type);
     }
 
-    async function handleSave() {
-        setError('');
+    function validate() {
+        const nextErrors = {};
 
         if (!form.name.trim()) {
-            setError('Nama aksi wajib diisi.');
-            return;
+            nextErrors.name = 'Nama aksi wajib diisi.';
         }
 
         if (!form.behaviors.length) {
-            setError('Pilih minimal satu perilaku untuk aksi ini.');
+            nextErrors.behaviors = 'Pilih minimal satu perilaku untuk aksi ini.';
+        } else {
+            for (const behavior of form.behaviors) {
+                const message = validateBehavior(behavior);
+                if (message) nextErrors[behavior.type] = message;
+            }
+        }
+
+        return nextErrors;
+    }
+
+    async function handleSave() {
+        const nextErrors = validate();
+        setFieldErrors(nextErrors);
+
+        if (Object.keys(nextErrors).length > 0) {
             return;
         }
 
+        setSubmitError('');
         setSaving(true);
 
         const payload = {
@@ -104,7 +157,7 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
             const saved = isEdit ? await window.api.actions.update(action.id, payload) : await window.api.actions.create(payload);
             onSaved(saved);
         } catch (err) {
-            setError(err?.message || 'Gagal menyimpan aksi.');
+            setSubmitError(err?.message || 'Gagal menyimpan aksi.');
         } finally {
             setSaving(false);
         }
@@ -131,14 +184,20 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
             }
         >
             <div>
-                <label className="mb-1.5 block text-sm font-medium">Nama aksi</label>
+                <label className="mb-1.5 block text-sm font-medium">
+                    Nama aksi <span className="text-primary-600">*</span>
+                </label>
                 <input
                     type="text"
                     value={form.name}
-                    onChange={(event) => patch({ name: event.target.value })}
+                    onChange={(event) => {
+                        patch({ name: event.target.value });
+                        clearFieldError('name');
+                    }}
                     placeholder="misalnya Melon air"
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm"
+                    className={`w-full rounded-lg border bg-bg px-3 py-2 text-sm ${fieldErrors.name ? 'border-2 border-primary-600' : 'border-border'}`}
                 />
+                {fieldErrors.name && <p className="mt-1 text-xs text-primary-600">{fieldErrors.name}</p>}
             </div>
 
             <div className="mt-5">
@@ -146,14 +205,21 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
                     <span className="inline-block h-4 w-1 rounded bg-primary-600"></span>
                     Apa yang harus terjadi? (Anda dapat memilih beberapa)
                 </p>
+                {fieldErrors.behaviors && <p className="mb-2 text-xs text-primary-600">{fieldErrors.behaviors}</p>}
 
                 <div className="space-y-2">
                     {BEHAVIOR_TYPES.map((bt) => {
                         const checked = isChecked(bt.type);
                         const behavior = form.behaviors.find((b) => b.type === bt.type);
+                        const behaviorError = fieldErrors[bt.type];
 
                         return (
-                            <div key={bt.type} className={`rounded-xl border p-3 ${checked ? 'border-primary-600' : 'border-border'}`}>
+                            <div
+                                key={bt.type}
+                                className={`rounded-xl border p-3 ${
+                                    behaviorError ? 'border-2 border-primary-600' : checked ? 'border-primary-600' : 'border-border'
+                                }`}
+                            >
                                 <label className="flex items-center gap-2 text-sm font-medium">
                                     <input
                                         type="checkbox"
@@ -167,6 +233,7 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
                                 {checked && behavior && (
                                     <div className="mt-3 pl-6">
                                         <BehaviorFields type={bt.type} value={behavior} onChange={(fields) => updateBehavior(bt.type, fields)} />
+                                        {behaviorError && <p className="mt-2 text-xs text-primary-600">{behaviorError}</p>}
                                     </div>
                                 )}
                             </div>
@@ -177,7 +244,7 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
 
             <ActionAdvancedSettings form={form} onChange={patch} screens={screens} />
 
-            {error && <p className="mt-4 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm text-primary-700">{error}</p>}
+            {submitError && <p className="mt-4 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm text-primary-700">{submitError}</p>}
         </Modal>
     );
 }
