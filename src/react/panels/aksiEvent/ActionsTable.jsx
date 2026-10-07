@@ -12,16 +12,13 @@ import {
     CubeIcon,
 } from '@heroicons/react/24/outline';
 import RowIconButton from '../../components/RowIconButton.jsx';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
-export const BEHAVIOR_LABELS = {
-    play_audio: 'Audio',
-    tts: 'TTS',
-    show_media: 'Gambar/GIF/Video',
-    show_alert: 'Peringatan',
-    webhook: 'Webhook',
-    keystroke: 'Keystroke',
-    minecraft_command: 'Perintah Minecraft',
-};
+export const BEHAVIOR_TYPE_KEYS = ['play_audio', 'tts', 'show_media', 'show_alert', 'webhook', 'keystroke', 'minecraft_command'];
+
+export function behaviorLabel(t, type) {
+    return t(`aksiEvent.behavior.${type}`);
+}
 
 const FEATURE_ICONS = [
     { type: 'play_audio', Icon: SpeakerWaveIcon },
@@ -34,9 +31,11 @@ const FEATURE_ICONS = [
 ];
 
 export default function ActionsTable({ actions, screens, onEdit, onTest, onDuplicate, onRemove }) {
+    const { t } = useLanguage();
+
     function screenName(screenId) {
         const screen = screens.find((s) => s.id === screenId);
-        return screen ? screen.name : '-';
+        return screen ? screen.name : t('common.dash');
     }
 
     return (
@@ -44,10 +43,10 @@ export default function ActionsTable({ actions, screens, onEdit, onTest, onDupli
             <table className="w-full text-left text-sm">
                 <thead>
                     <tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
-                        <th className="py-2 px-4 font-medium">Nama</th>
-                        <th className="py-2 px-4 font-medium">Layar</th>
-                        <th className="py-2 px-4 font-medium">Durasi</th>
-                        <th className="py-2 px-4 font-medium">Fitur</th>
+                        <th className="py-2 px-4 font-medium">{t('aksiEvent.actionsTable.name')}</th>
+                        <th className="py-2 px-4 font-medium">{t('aksiEvent.actionsTable.screen')}</th>
+                        <th className="py-2 px-4 font-medium">{t('aksiEvent.actionsTable.duration')}</th>
+                        <th className="py-2 px-4 font-medium">{t('aksiEvent.actionsTable.features')}</th>
                         <th className="py-2 px-4 font-medium"></th>
                     </tr>
                 </thead>
@@ -55,7 +54,7 @@ export default function ActionsTable({ actions, screens, onEdit, onTest, onDupli
                     {!actions.length ? (
                         <tr>
                             <td colSpan={5} className="py-6 text-center text-text-muted">
-                                Belum ada Aksi. Klik &quot;Buat Aksi baru&quot; untuk membuatnya.
+                                {t('aksiEvent.actionsTable.empty')}
                             </td>
                         </tr>
                     ) : (
@@ -64,7 +63,7 @@ export default function ActionsTable({ actions, screens, onEdit, onTest, onDupli
 
                             return (
                                 <tr key={action.id} className="border-b border-border last:border-0">
-                                    <td className="py-2 px-4 font-medium">{action.name || '(tanpa nama)'}</td>
+                                    <td className="py-2 px-4 font-medium">{action.name || t('aksiEvent.actionsTable.unnamed')}</td>
                                     <td className="py-2 px-4">{screenName(action.screenId)}</td>
                                     <td className="py-2 px-4">{action.durationSeconds}s</td>
                                     <td className="py-2 px-4">
@@ -72,7 +71,7 @@ export default function ActionsTable({ actions, screens, onEdit, onTest, onDupli
                                             {FEATURE_ICONS.map(({ type, Icon }) => (
                                                 <Icon
                                                     key={type}
-                                                    title={BEHAVIOR_LABELS[type]}
+                                                    title={behaviorLabel(t, type)}
                                                     className={`h-4 w-4 ${activeTypes.has(type) ? 'text-primary-600' : 'text-text-muted opacity-30'}`}
                                                 />
                                             ))}
@@ -80,16 +79,16 @@ export default function ActionsTable({ actions, screens, onEdit, onTest, onDupli
                                     </td>
                                     <td className="py-2 px-4">
                                         <div className="flex items-center justify-end gap-1">
-                                            <RowIconButton onClick={() => onTest(action.id)} title="Tes">
+                                            <RowIconButton onClick={() => onTest(action.id)} title={t('common.test')}>
                                                 <PlayIcon className="h-4 w-4" />
                                             </RowIconButton>
-                                            <RowIconButton onClick={() => onEdit(action)} title="Ubah">
+                                            <RowIconButton onClick={() => onEdit(action)} title={t('common.edit')}>
                                                 <PencilSquareIcon className="h-4 w-4" />
                                             </RowIconButton>
-                                            <RowIconButton onClick={() => onDuplicate(action.id)} title="Duplikat">
+                                            <RowIconButton onClick={() => onDuplicate(action.id)} title={t('common.duplicate')}>
                                                 <DocumentDuplicateIcon className="h-4 w-4" />
                                             </RowIconButton>
-                                            <RowIconButton onClick={() => onRemove(action.id)} title="Hapus" tone="danger">
+                                            <RowIconButton onClick={() => onRemove(action.id)} title={t('common.delete')} tone="danger">
                                                 <TrashIcon className="h-4 w-4" />
                                             </RowIconButton>
                                         </div>

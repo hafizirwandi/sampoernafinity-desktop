@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
 export default function MinecraftSettings() {
+    const { t } = useLanguage();
     const [baseUrl, setBaseUrl] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [hasApiKey, setHasApiKey] = useState(false);
@@ -27,10 +29,10 @@ export default function MinecraftSettings() {
             const settings = await window.api.minecraft.saveSettings(payload);
             setHasApiKey(settings.hasApiKey);
             setApiKey('');
-            setMessage('Pengaturan tersimpan.');
+            setMessage(t('aksiEvent.minecraftSettings.savedMessage'));
             setMessageIsError(false);
         } catch (error) {
-            setMessage(error?.message || 'Gagal menyimpan pengaturan.');
+            setMessage(error?.message || t('aksiEvent.minecraftSettings.saveErrorGeneric'));
             setMessageIsError(true);
         } finally {
             setSaving(false);
@@ -43,10 +45,10 @@ export default function MinecraftSettings() {
 
         try {
             await window.api.minecraft.testConnection();
-            setMessage('Koneksi ke ServerTap berhasil.');
+            setMessage(t('aksiEvent.minecraftSettings.testSuccessMessage'));
             setMessageIsError(false);
         } catch (error) {
-            setMessage(error?.message || 'Gagal terhubung ke ServerTap.');
+            setMessage(error?.message || t('aksiEvent.minecraftSettings.testErrorGeneric'));
             setMessageIsError(true);
         } finally {
             setTesting(false);
@@ -55,15 +57,12 @@ export default function MinecraftSettings() {
 
     return (
         <div className="rounded-2xl border border-border bg-surface p-5">
-            <h3 className="text-sm font-semibold">Koneksi Minecraft (ServerTap)</h3>
-            <p className="mt-1 text-xs text-text-muted">
-                Diperlukan untuk tipe Aksi &quot;Jalankan Perintah Minecraft&quot;. Pasang plugin ServerTap di server Minecraft Anda,
-                lalu isi Base URL dan API Key-nya di sini.
-            </p>
+            <h3 className="text-sm font-semibold">{t('aksiEvent.minecraftSettings.title')}</h3>
+            <p className="mt-1 text-xs text-text-muted">{t('aksiEvent.minecraftSettings.description')}</p>
 
             <div className="mt-4 space-y-3">
                 <div>
-                    <label className="mb-1.5 block text-sm font-medium">Base URL</label>
+                    <label className="mb-1.5 block text-sm font-medium">{t('aksiEvent.minecraftSettings.baseUrlLabel')}</label>
                     <input
                         type="text"
                         value={baseUrl}
@@ -74,12 +73,12 @@ export default function MinecraftSettings() {
                 </div>
 
                 <div>
-                    <label className="mb-1.5 block text-sm font-medium">API Key</label>
+                    <label className="mb-1.5 block text-sm font-medium">{t('aksiEvent.minecraftSettings.apiKeyLabel')}</label>
                     <input
                         type="password"
                         value={apiKey}
                         onChange={(event) => setApiKey(event.target.value)}
-                        placeholder={hasApiKey ? 'Tersimpan — isi untuk mengganti' : 'Isi API Key ServerTap'}
+                        placeholder={hasApiKey ? t('aksiEvent.minecraftSettings.apiKeySavedPlaceholder') : t('aksiEvent.minecraftSettings.apiKeyPlaceholder')}
                         className="w-full max-w-md rounded-lg border border-border bg-bg px-3 py-2 text-sm"
                     />
                 </div>
@@ -91,7 +90,7 @@ export default function MinecraftSettings() {
                         disabled={saving}
                         className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
                     >
-                        {saving ? 'Menyimpan...' : 'Simpan'}
+                        {saving ? t('common.saving') : t('common.save')}
                     </button>
                     <button
                         type="button"
@@ -99,7 +98,7 @@ export default function MinecraftSettings() {
                         disabled={testing}
                         className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-alt disabled:opacity-60"
                     >
-                        {testing ? 'Menguji...' : 'Test Connection'}
+                        {testing ? t('aksiEvent.minecraftSettings.testing') : t('aksiEvent.minecraftSettings.testConnection')}
                     </button>
                 </div>
 

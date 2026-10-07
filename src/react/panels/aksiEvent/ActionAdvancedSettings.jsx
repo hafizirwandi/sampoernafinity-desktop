@@ -1,13 +1,17 @@
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
+
 export default function ActionAdvancedSettings({ form, onChange, screens }) {
+    const { t } = useLanguage();
+
     return (
         <div className="mt-6 space-y-5 border-t border-border pt-5">
             <div>
                 <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
                     <span className="inline-block h-4 w-1 rounded bg-primary-600"></span>
-                    Berapa lama itu harus ditampilkan?
+                    {t('aksiEvent.advancedSettings.durationHeading')}
                 </p>
                 <div className="flex flex-wrap items-center gap-3">
-                    <span className="text-sm text-text-muted">Tunjukkan untuk</span>
+                    <span className="text-sm text-text-muted">{t('aksiEvent.advancedSettings.showFor')}</span>
                     <input
                         type="number"
                         min="1"
@@ -15,7 +19,7 @@ export default function ActionAdvancedSettings({ form, onChange, screens }) {
                         onChange={(event) => onChange({ durationSeconds: event.target.value })}
                         className="w-16 rounded-lg border border-border bg-bg px-2 py-1.5 text-sm"
                     />
-                    <span className="text-sm text-text-muted">detik &middot; Overlay Screen</span>
+                    <span className="text-sm text-text-muted">{t('aksiEvent.advancedSettings.secondsOverlay')}</span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                     {screens.map((screen, index) => (
@@ -32,19 +36,16 @@ export default function ActionAdvancedSettings({ form, onChange, screens }) {
                         </button>
                     ))}
                 </div>
-                <p className="mt-2 text-xs text-text-muted">
-                    Hanya berlaku untuk gambar, video, dan peringatan di overlay. Audio selalu diputar sampai akhir; kombo hadiah
-                    mengulangi audio secara berurutan. Setiap Layar memiliki Sumber Browser OBS sendiri.
-                </p>
+                <p className="mt-2 text-xs text-text-muted">{t('aksiEvent.advancedSettings.durationHint')}</p>
             </div>
 
             <div>
                 <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
                     <span className="inline-block h-4 w-1 rounded bg-primary-600"></span>
-                    Batas (Pengaturan tambahan)
+                    {t('aksiEvent.advancedSettings.limitsHeading')}
                 </p>
                 <div className="flex flex-wrap items-center gap-3">
-                    <span className="text-sm text-text-muted">Global Cooldown</span>
+                    <span className="text-sm text-text-muted">{t('aksiEvent.advancedSettings.globalCooldown')}</span>
                     <input
                         type="number"
                         min="0"
@@ -52,7 +53,7 @@ export default function ActionAdvancedSettings({ form, onChange, screens }) {
                         onChange={(event) => onChange({ cooldownGlobalSeconds: event.target.value })}
                         className="w-20 rounded-lg border border-border bg-bg px-2 py-1.5 text-sm"
                     />
-                    <span className="text-sm text-text-muted">detik &middot; Cooldown per pemirsa</span>
+                    <span className="text-sm text-text-muted">{t('aksiEvent.advancedSettings.secondsPerViewerCooldown')}</span>
                     <input
                         type="number"
                         min="0"
@@ -60,13 +61,13 @@ export default function ActionAdvancedSettings({ form, onChange, screens }) {
                         onChange={(event) => onChange({ cooldownPerViewerSeconds: event.target.value })}
                         className="w-20 rounded-lg border border-border bg-bg px-2 py-1.5 text-sm"
                     />
-                    <span className="text-sm text-text-muted">detik</span>
+                    <span className="text-sm text-text-muted">{t('aksiEvent.advancedSettings.seconds')}</span>
                 </div>
             </div>
 
             <div className="space-y-2">
                 <label className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5 text-sm font-medium">
-                    <span>Aktifkan Fade-In/Out</span>
+                    <span>{t('aksiEvent.advancedSettings.fadeInOut')}</span>
                     <input
                         type="checkbox"
                         checked={form.fadeInOut}
@@ -75,7 +76,7 @@ export default function ActionAdvancedSettings({ form, onChange, screens }) {
                     />
                 </label>
                 <label className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5 text-sm font-medium">
-                    <span>Lewati aksi selanjutnya</span>
+                    <span>{t('aksiEvent.advancedSettings.skipNext')}</span>
                     <input
                         type="checkbox"
                         checked={form.skipNextAction}
@@ -85,7 +86,7 @@ export default function ActionAdvancedSettings({ form, onChange, screens }) {
                 </label>
                 <label className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5 text-sm font-medium">
                     <span className="flex items-center gap-2">
-                        Ulangi dengan kombo hadiah (maks &times;
+                        {t('aksiEvent.advancedSettings.repeatCombo')}
                         <input
                             type="number"
                             min="1"

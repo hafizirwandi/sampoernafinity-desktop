@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
 import Toast from '../../components/Toast.jsx';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
-const ROLE_OPTIONS = [
-    { value: 'any', label: 'Semua Orang' },
-    { value: 'follower', label: 'Follower' },
-    { value: 'friend', label: 'Teman' },
-    { value: 'subscriber', label: 'Subscriber / SuperFan' },
-    { value: 'moderator', label: 'Moderator' },
-    { value: 'team_level', label: 'Level Tim' },
-    { value: 'top_gifter', label: 'Top Gifter' },
-];
+const ROLE_KEYS = ['any', 'follower', 'friend', 'subscriber', 'moderator', 'team_level', 'top_gifter'];
+const COMMENT_TYPE_KEYS = ['all', 'dot', 'slash', 'keyword'];
 
-const COMMENT_TYPE_OPTIONS = [
-    { value: 'all', label: 'Semua Komentar' },
-    { value: 'dot', label: 'Komentar yang diawali tanda titik (.)' },
-    { value: 'slash', label: 'Komentar yang diawali tanda slash (/)' },
-    { value: 'keyword', label: 'Komentar yang diawali kata-kata yang ditentukan:' },
-];
+function roleOptions(t) {
+    return ROLE_KEYS.map((value) => ({ value, label: t(`tts.accessFilter.role.${value}`) }));
+}
+
+function commentTypeOptions(t) {
+    return COMMENT_TYPE_KEYS.map((value) => ({ value, label: t(`tts.accessFilter.type.${value}`) }));
+}
 
 export default function AccessFilterTab() {
+    const { t } = useLanguage();
+    const ROLE_OPTIONS = roleOptions(t);
+    const COMMENT_TYPE_OPTIONS = commentTypeOptions(t);
     const [settings, setSettings] = useState(null);
     const [badWordsText, setBadWordsText] = useState('');
     const [savingRoles, setSavingRoles] = useState(false);
@@ -61,7 +59,7 @@ export default function AccessFilterTab() {
                 minTopGifterRank: Number(settings.minTopGifterRank) || 1,
             });
             setSettings((prev) => ({ ...prev, ...next }));
-            setToastMessage('Akses tersimpan');
+            setToastMessage(t('tts.accessFilter.savedRolesToast'));
         } finally {
             setSavingRoles(false);
         }
@@ -75,7 +73,7 @@ export default function AccessFilterTab() {
                 commentKeyword: settings.commentKeyword,
             });
             setSettings((prev) => ({ ...prev, ...next }));
-            setToastMessage('Jenis komentar tersimpan');
+            setToastMessage(t('tts.accessFilter.savedCommentTypeToast'));
         } finally {
             setSavingCommentType(false);
         }
@@ -88,7 +86,7 @@ export default function AccessFilterTab() {
             const next = await window.api.tts.updateSettings({ badWords });
             setSettings((prev) => ({ ...prev, ...next }));
             setBadWordsText((next.badWords || []).join(' '));
-            setToastMessage('Filter kata tersimpan');
+            setToastMessage(t('tts.accessFilter.savedBadWordsToast'));
         } finally {
             setSavingBadWords(false);
         }
@@ -100,7 +98,7 @@ export default function AccessFilterTab() {
         <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="rounded-2xl border border-border bg-surface p-5">
-                    <h3 className="text-sm font-semibold">Siapa yang bisa menggunakan?</h3>
+                    <h3 className="text-sm font-semibold">{t('tts.accessFilter.whoHeading')}</h3>
 
                     <div className="mt-3 flex flex-wrap gap-2">
                         {ROLE_OPTIONS.map((role) => {
@@ -121,11 +119,11 @@ export default function AccessFilterTab() {
                         })}
                     </div>
 
-                    {noTarget && <p className="mt-2 text-xs text-primary-600">Pilih minimal satu target.</p>}
+                    {noTarget && <p className="mt-2 text-xs text-primary-600">{t('tts.accessFilter.selectMinTarget')}</p>}
 
                     {(settings.allowedRoles || []).includes('team_level') && (
                         <div className="mt-4">
-                            <label className="mb-1.5 block text-sm font-medium">Minimum Tim Level (default: 1)</label>
+                            <label className="mb-1.5 block text-sm font-medium">{t('tts.accessFilter.minTeamLevel')}</label>
                             <input
                                 type="number"
                                 min="1"
@@ -138,7 +136,7 @@ export default function AccessFilterTab() {
 
                     {(settings.allowedRoles || []).includes('top_gifter') && (
                         <div className="mt-4">
-                            <label className="mb-1.5 block text-sm font-medium">Minimum Top Gifter (default: 3)</label>
+                            <label className="mb-1.5 block text-sm font-medium">{t('tts.accessFilter.minTopGifter')}</label>
                             <input
                                 type="number"
                                 min="1"
@@ -155,12 +153,12 @@ export default function AccessFilterTab() {
                         disabled={savingRoles || noTarget}
                         className="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
                     >
-                        {savingRoles ? 'Menyimpan...' : 'Simpan'}
+                        {savingRoles ? t('common.saving') : t('common.save')}
                     </button>
                 </div>
 
                 <div className="rounded-2xl border border-border bg-surface p-5">
-                    <h3 className="text-sm font-semibold">Jenis komentar apa yang akan dibacakan?</h3>
+                    <h3 className="text-sm font-semibold">{t('tts.accessFilter.commentTypeHeading')}</h3>
 
                     <div className="mt-3 space-y-2">
                         {COMMENT_TYPE_OPTIONS.map((opt) => (
@@ -194,21 +192,19 @@ export default function AccessFilterTab() {
                         disabled={savingCommentType}
                         className="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
                     >
-                        {savingCommentType ? 'Menyimpan...' : 'Simpan'}
+                        {savingCommentType ? t('common.saving') : t('common.save')}
                     </button>
                 </div>
             </div>
 
             <div className="rounded-2xl border border-border bg-surface p-5">
-                <h3 className="text-sm font-semibold">Filter kata</h3>
-                <p className="mt-1 text-sm text-text-muted">
-                    Komentar tidak akan dibacakan jika mengandung kata-kata di bawah ini. Pisahkan kata dengan spasi.
-                </p>
+                <h3 className="text-sm font-semibold">{t('tts.accessFilter.badWordsHeading')}</h3>
+                <p className="mt-1 text-sm text-text-muted">{t('tts.accessFilter.badWordsDesc')}</p>
                 <textarea
                     value={badWordsText}
                     onChange={(event) => setBadWordsText(event.target.value)}
                     rows={3}
-                    placeholder="Masukan kata-kata yang tidak akan dibaca, pisahkan kata dengan spasi."
+                    placeholder={t('tts.accessFilter.badWordsPlaceholder')}
                     className="mt-3 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm"
                 />
                 <button
@@ -217,7 +213,7 @@ export default function AccessFilterTab() {
                     disabled={savingBadWords}
                     className="mt-3 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
                 >
-                    {savingBadWords ? 'Menyimpan...' : 'Simpan Kata'}
+                    {savingBadWords ? t('common.saving') : t('tts.accessFilter.saveWordsButton')}
                 </button>
             </div>
 

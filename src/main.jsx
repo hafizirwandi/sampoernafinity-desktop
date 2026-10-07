@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './react/App.jsx';
+import { LanguageProvider } from './react/i18n/LanguageContext.jsx';
 
 const rootEl = document.getElementById('root');
 
@@ -14,6 +15,8 @@ if (!window.api?.auth) {
 
 createRoot(rootEl).render(
     <StrictMode>
-        <App />
+        <LanguageProvider>
+            <App />
+        </LanguageProvider>
     </StrictMode>,
 );

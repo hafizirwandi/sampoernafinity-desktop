@@ -2,32 +2,38 @@ import { useEffect, useState } from 'react';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import SearchMultiSelect from '../../components/SearchMultiSelect.jsx';
 import Toast from '../../components/Toast.jsx';
-import { BEHAVIOR_LABELS } from './ActionsTable.jsx';
+import { behaviorLabel } from './ActionsTable.jsx';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
-const TYPE_OPTIONS = [
-    { value: 'chat', label: 'Obrolan (Chat)' },
-    { value: 'like', label: 'Menyukai (Like)' },
-    { value: 'join', label: 'Bergabung ke ruang (Join)' },
-    { value: 'follow', label: 'Mengikuti (Follow)' },
-    { value: 'share', label: 'Membagikan (Share)' },
-    { value: 'subscribe', label: 'Berlangganan (Subscribe)' },
-    { value: 'gift', label: 'Mengirim Hadiah (Gift)' },
-];
+function typeOptions(t) {
+    return [
+        { value: 'chat', label: t('aksiEvent.simulateEvent.typeChat') },
+        { value: 'like', label: t('aksiEvent.simulateEvent.typeLike') },
+        { value: 'join', label: t('aksiEvent.simulateEvent.typeJoin') },
+        { value: 'follow', label: t('aksiEvent.simulateEvent.typeFollow') },
+        { value: 'share', label: t('aksiEvent.simulateEvent.typeShare') },
+        { value: 'subscribe', label: t('aksiEvent.simulateEvent.typeSubscribe') },
+        { value: 'gift', label: t('aksiEvent.simulateEvent.typeGift') },
+    ];
+}
 
-const SKIP_REASON_LABELS = {
-    audience: 'audience (siapa yang memicu) tidak cocok',
-    cooldown: 'sedang cooldown',
-};
+function skipReasonLabel(t, reason) {
+    if (reason === 'audience') return t('aksiEvent.simulateEvent.skipReasonAudience');
+    if (reason === 'cooldown') return t('aksiEvent.simulateEvent.skipReasonCooldown');
+    return reason;
+}
 
-function behaviorResultLine(result) {
-    const label = BEHAVIOR_LABELS[result.type] || result.type;
+function behaviorResultLine(t, result) {
+    const label = behaviorLabel(t, result.type) || result.type;
 
-    if (result.error) return `${label}: gagal — ${result.error}`;
-    if (result.skipped) return `${label}: dilewati — ${result.reason}`;
-    return `${label}: berhasil dijalankan`;
+    if (result.error) return t('aksiEvent.panel.resultFail', { label, error: result.error });
+    if (result.skipped) return t('aksiEvent.panel.resultSkip', { label, reason: result.reason });
+    return t('aksiEvent.panel.resultOk', { label });
 }
 
 export default function SimulateEventPanel() {
+    const { t } = useLanguage();
+    const TYPE_OPTIONS = typeOptions(t);
     const [type, setType] = useState('chat');
     const [uniqueId, setUniqueId] = useState('test_user');
     const [nickname, setNickname] = useState('Test User');
@@ -78,8 +84,8 @@ export default function SimulateEventPanel() {
 
             setToastMessage(
                 matchedEvents.length
-                    ? `${matchedEvents.length} Event terpicu, ${actionsRunCount} Aksi dijalankan.`
-                    : 'Tidak ada Event yang terpicu untuk simulasi ini.',
+                    ? t('aksiEvent.simulateEvent.toastMatched', { count: matchedEvents.length, actionsCount: actionsRunCount })
+                    : t('aksiEvent.simulateEvent.toastNoMatch'),
             );
         } finally {
             setRunning(false);
@@ -89,17 +95,14 @@ export default function SimulateEventPanel() {
     return (
         <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-surface p-5">
-                <h2 className="text-lg font-semibold">Simulasi Event</h2>
-                <p className="mt-1 max-w-2xl text-sm text-text-muted">
-                    Uji Event dan Aksi tanpa perlu sedang LIVE — atur pemicu palsu di bawah, lalu jalankan untuk melihat Event mana
-                    yang cocok dan Aksi apa yang dijalankan.
-                </p>
+                <h2 className="text-lg font-semibold">{t('aksiEvent.simulateEvent.title')}</h2>
+                <p className="mt-1 max-w-2xl text-sm text-text-muted">{t('aksiEvent.simulateEvent.description')}</p>
             </div>
 
             <div className="rounded-2xl border border-border bg-surface p-5">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                        <label className="mb-1.5 block text-sm font-medium">Tipe event</label>
+                        <label className="mb-1.5 block text-sm font-medium">{t('aksiEvent.simulateEvent.typeLabel')}</label>
                         <select value={type} onChange={(event) => setType(event.target.value)} className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm">
                             {TYPE_OPTIONS.map((opt) => (
                                 <option key={opt.value} value={opt.value}>
@@ -110,7 +113,7 @@ export default function SimulateEventPanel() {
                     </div>
 
                     <div>
-                        <label className="mb-1.5 block text-sm font-medium">Username (uniqueId)</label>
+                        <label className="mb-1.5 block text-sm font-medium">{t('aksiEvent.simulateEvent.usernameLabel')}</label>
                         <input
                             type="text"
                             value={uniqueId}
@@ -120,7 +123,7 @@ export default function SimulateEventPanel() {
                     </div>
 
                     <div>
-                        <label className="mb-1.5 block text-sm font-medium">Nickname</label>
+                        <label className="mb-1.5 block text-sm font-medium">{t('aksiEvent.simulateEvent.nicknameLabel')}</label>
                         <input
                             type="text"
                             value={nickname}
@@ -131,7 +134,7 @@ export default function SimulateEventPanel() {
 
                     {type === 'chat' && (
                         <div className="sm:col-span-2">
-                            <label className="mb-1.5 block text-sm font-medium">Isi pesan</label>
+                            <label className="mb-1.5 block text-sm font-medium">{t('aksiEvent.simulateEvent.messageLabel')}</label>
                             <input
                                 type="text"
                                 value={content}
@@ -143,7 +146,7 @@ export default function SimulateEventPanel() {
 
                     {type === 'like' && (
                         <div>
-                            <label className="mb-1.5 block text-sm font-medium">Jumlah like</label>
+                            <label className="mb-1.5 block text-sm font-medium">{t('aksiEvent.simulateEvent.likeCountLabel')}</label>
                             <input
                                 type="number"
                                 min="1"
@@ -157,18 +160,18 @@ export default function SimulateEventPanel() {
                     {type === 'gift' && (
                         <>
                             <div>
-                                <label className="mb-1.5 block text-sm font-medium">Gift</label>
+                                <label className="mb-1.5 block text-sm font-medium">{t('aksiEvent.simulateEvent.giftLabel')}</label>
                                 <SearchMultiSelect
                                     items={gifts}
                                     selectedIds={giftId ? [giftId] : []}
                                     onChange={(ids) => setGiftId(ids[ids.length - 1] || '')}
                                     getId={(g) => g.tiktokId}
                                     getLabel={(g) => g.name}
-                                    placeholder="Cari gift..."
+                                    placeholder={t('common.searchGift')}
                                 />
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-sm font-medium">Jumlah (combo)</label>
+                                <label className="mb-1.5 block text-sm font-medium">{t('aksiEvent.simulateEvent.comboLabel')}</label>
                                 <input
                                     type="number"
                                     min="1"
@@ -182,19 +185,19 @@ export default function SimulateEventPanel() {
                 </div>
 
                 <div className="mt-4">
-                    <p className="mb-1.5 text-sm font-medium">Status pengirim</p>
+                    <p className="mb-1.5 text-sm font-medium">{t('aksiEvent.simulateEvent.senderStatus')}</p>
                     <div className="flex flex-wrap gap-4">
                         <label className="flex items-center gap-2 text-sm">
                             <input type="checkbox" checked={isFollower} onChange={(event) => setIsFollower(event.target.checked)} className="rounded border-border text-primary-600 focus:ring-primary-600" />
-                            Pengikut
+                            {t('aksiEvent.simulateEvent.follower')}
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                             <input type="checkbox" checked={isSubscriber} onChange={(event) => setIsSubscriber(event.target.checked)} className="rounded border-border text-primary-600 focus:ring-primary-600" />
-                            Subscriber
+                            {t('aksiEvent.simulateEvent.subscriber')}
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                             <input type="checkbox" checked={isModerator} onChange={(event) => setIsModerator(event.target.checked)} className="rounded border-border text-primary-600 focus:ring-primary-600" />
-                            Moderator
+                            {t('aksiEvent.simulateEvent.moderator')}
                         </label>
                     </div>
                 </div>
@@ -205,16 +208,16 @@ export default function SimulateEventPanel() {
                     disabled={running || (type === 'gift' && !giftId)}
                     className="mt-5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
                 >
-                    {running ? 'Menjalankan...' : 'Jalankan Simulasi'}
+                    {running ? t('aksiEvent.simulateEvent.running') : t('aksiEvent.simulateEvent.runButton')}
                 </button>
             </div>
 
             {report && (
                 <div className="rounded-2xl border border-border bg-surface p-5">
-                    <h3 className="text-sm font-semibold">Hasil Simulasi</h3>
+                    <h3 className="text-sm font-semibold">{t('aksiEvent.simulateEvent.resultsTitle')}</h3>
 
                     {!report.length ? (
-                        <p className="mt-2 text-sm text-text-muted">Tidak ada Event dengan pemicu tipe ini.</p>
+                        <p className="mt-2 text-sm text-text-muted">{t('aksiEvent.simulateEvent.noMatchingType')}</p>
                     ) : (
                         <div className="mt-3 space-y-3">
                             {report.map((entry) => (
@@ -225,21 +228,23 @@ export default function SimulateEventPanel() {
                                         ) : (
                                             <XCircleIcon className="h-4 w-4 shrink-0 text-text-muted" />
                                         )}
-                                        {entry.eventName || '(tanpa nama)'}
+                                        {entry.eventName || t('aksiEvent.simulateEvent.unnamed')}
                                     </div>
 
                                     {!entry.matched && (
-                                        <p className="mt-1 pl-6 text-xs text-text-muted">Tidak dipicu — {SKIP_REASON_LABELS[entry.reason] || entry.reason}.</p>
+                                        <p className="mt-1 pl-6 text-xs text-text-muted">
+                                            {t('aksiEvent.simulateEvent.notTriggered', { reason: skipReasonLabel(t, entry.reason) })}
+                                        </p>
                                     )}
 
                                     {entry.matched && (
                                         <div className="mt-2 space-y-1.5 pl-6">
                                             {entry.actionsRun.map((run, index) => (
                                                 <div key={index}>
-                                                    <p className="text-xs font-medium">{run.actionName || '(tanpa nama)'}</p>
+                                                    <p className="text-xs font-medium">{run.actionName || t('aksiEvent.simulateEvent.unnamed')}</p>
                                                     <ul className="list-inside list-disc text-xs text-text-muted">
                                                         {run.results.map((result, resultIndex) => (
-                                                            <li key={resultIndex}>{behaviorResultLine(result)}</li>
+                                                            <li key={resultIndex}>{behaviorResultLine(t, result)}</li>
                                                         ))}
                                                     </ul>
                                                 </div>

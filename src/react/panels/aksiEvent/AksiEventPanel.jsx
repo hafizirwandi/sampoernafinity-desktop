@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import ActionsTable, { BEHAVIOR_LABELS } from './ActionsTable.jsx';
+import ActionsTable, { behaviorLabel } from './ActionsTable.jsx';
 import EventsTable from './EventsTable.jsx';
 import OverlaySettings from './OverlaySettings.jsx';
 import MinecraftSettings from './MinecraftSettings.jsx';
@@ -8,24 +8,25 @@ import EventModal from './EventModal.jsx';
 import SimulateEventPanel from './SimulateEventPanel.jsx';
 import Toast from '../../components/Toast.jsx';
 import PlaceholderPanel from '../PlaceholderPanel.jsx';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
-const TABS = [
-    { key: 'aksi', label: 'Aksi' },
-    { key: 'event', label: 'Event' },
-    { key: 'simulate', label: 'Simulasi Event' },
-    { key: 'import', label: 'Import' },
-    { key: 'overlay', label: 'Pengaturan Overlay' },
-];
+function testResultLine(t, result) {
+    const label = behaviorLabel(t, result.type) || result.type;
 
-function testResultLine(result) {
-    const label = BEHAVIOR_LABELS[result.type] || result.type;
-
-    if (result.error) return `${label}: gagal — ${result.error}`;
-    if (result.skipped) return `${label}: dilewati — ${result.reason}`;
-    return `${label}: berhasil dijalankan`;
+    if (result.error) return t('aksiEvent.panel.resultFail', { label, error: result.error });
+    if (result.skipped) return t('aksiEvent.panel.resultSkip', { label, reason: result.reason });
+    return t('aksiEvent.panel.resultOk', { label });
 }
 
 export default function AksiEventPanel() {
+    const { t } = useLanguage();
+    const TABS = [
+        { key: 'aksi', label: t('aksiEvent.panel.tabAksi') },
+        { key: 'event', label: t('aksiEvent.panel.tabEvent') },
+        { key: 'simulate', label: t('aksiEvent.panel.tabSimulate') },
+        { key: 'import', label: t('aksiEvent.panel.tabImport') },
+        { key: 'overlay', label: t('aksiEvent.panel.tabOverlay') },
+    ];
     const [tab, setTab] = useState('aksi');
     const [actions, setActions] = useState([]);
     const [events, setEvents] = useState([]);
@@ -88,26 +89,22 @@ export default function AksiEventPanel() {
     return (
         <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-surface p-5">
-                <h2 className="text-lg font-semibold">Aksi &amp; Event</h2>
-                <p className="mt-1 max-w-2xl text-sm text-text-muted">
-                    Di sini Anda menentukan aksi dan event khusus (pemicu). Contoh: menampilkan video/animasi tentang hadiah tertentu.
-                    Buat Aksi terlebih dahulu, lalu tautkan ke Event. Hubungkan TikTok LIVE di tab Connection agar event menerima
-                    hadiah/suka/obrolan.
-                </p>
+                <h2 className="text-lg font-semibold">{t('aksiEvent.panel.title')}</h2>
+                <p className="mt-1 max-w-2xl text-sm text-text-muted">{t('aksiEvent.panel.description')}</p>
             </div>
 
             <div className="inline-flex rounded-lg border border-border bg-surface p-1">
-                {TABS.map((t) => {
-                    const active = tab === t.key;
+                {TABS.map((tabItem) => {
+                    const active = tab === tabItem.key;
 
                     return (
                         <button
-                            key={t.key}
+                            key={tabItem.key}
                             type="button"
-                            onClick={() => setTab(t.key)}
+                            onClick={() => setTab(tabItem.key)}
                             className={`rounded-md px-4 py-1.5 text-sm font-medium ${active ? 'bg-primary-600 text-white' : 'text-text-muted'}`}
                         >
-                            {t.label}
+                            {tabItem.label}
                         </button>
                     );
                 })}
@@ -116,13 +113,13 @@ export default function AksiEventPanel() {
             {tab === 'aksi' && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-text-muted">Aksi</h3>
+                        <h3 className="text-sm font-semibold text-text-muted">{t('aksiEvent.panel.actionsHeading')}</h3>
                         <button
                             type="button"
                             onClick={() => setActionModal({ action: null })}
                             className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                         >
-                            + Buat Aksi baru
+                            {t('aksiEvent.panel.newActionButton')}
                         </button>
                     </div>
 
@@ -140,13 +137,13 @@ export default function AksiEventPanel() {
             {tab === 'event' && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-text-muted">Event</h3>
+                        <h3 className="text-sm font-semibold text-text-muted">{t('aksiEvent.panel.eventsHeading')}</h3>
                         <button
                             type="button"
                             onClick={() => setEventModal({ event: null })}
                             className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                         >
-                            + Buat Event baru
+                            {t('aksiEvent.panel.newEventButton')}
                         </button>
                     </div>
                     <EventsTable
@@ -191,10 +188,10 @@ export default function AksiEventPanel() {
 
             {testResults && (
                 <Toast onDismiss={() => setTestResults(null)}>
-                    <p className="mb-1 font-medium">Hasil tes aksi:</p>
+                    <p className="mb-1 font-medium">{t('aksiEvent.panel.testResultsTitle')}</p>
                     <ul className="list-inside list-disc space-y-0.5 text-text-muted">
                         {testResults.map((result, index) => (
-                            <li key={index}>{testResultLine(result)}</li>
+                            <li key={index}>{testResultLine(t, result)}</li>
                         ))}
                     </ul>
                 </Toast>

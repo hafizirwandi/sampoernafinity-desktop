@@ -3,8 +3,10 @@ import { PlusIcon, StopIcon } from '@heroicons/react/24/outline';
 import ToggleSwitch from '../../components/ToggleSwitch.jsx';
 import SoundboardTable from './SoundboardTable.jsx';
 import SoundNotificationModal from './SoundNotificationModal.jsx';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
 export default function SoundboardPanel() {
+    const { t } = useLanguage();
     const [sounds, setSounds] = useState([]);
     const [globalEnabled, setGlobalEnabled] = useState(true);
     const [search, setSearch] = useState('');
@@ -53,11 +55,8 @@ export default function SoundboardPanel() {
     return (
         <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-surface p-5">
-                <h2 className="text-lg font-semibold">Suara</h2>
-                <p className="mt-1 max-w-2xl text-sm text-text-muted">
-                    Putar suara secara otomatis saat ada pemicu dari TikTok LIVE, atau langsung dengan menekan tombol pintas — bahkan
-                    tanpa pemicu sama sekali.
-                </p>
+                <h2 className="text-lg font-semibold">{t('soundboard.panel.title')}</h2>
+                <p className="mt-1 max-w-2xl text-sm text-text-muted">{t('soundboard.panel.description')}</p>
             </div>
 
             <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -68,12 +67,12 @@ export default function SoundboardPanel() {
                         className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                     >
                         <PlusIcon className="h-4 w-4" />
-                        Buat Notifikasi Suara
+                        {t('soundboard.panel.createButton')}
                     </button>
 
                     <label className="flex items-center gap-2 text-sm">
-                        <ToggleSwitch checked={globalEnabled} onChange={toggleGlobalEnabled} title="Suara aktif" />
-                        Suara aktif
+                        <ToggleSwitch checked={globalEnabled} onChange={toggleGlobalEnabled} title={t('soundboard.panel.activeToggleLabel')} />
+                        {t('soundboard.panel.activeToggleLabel')}
                     </label>
                 </div>
 
@@ -82,13 +81,13 @@ export default function SoundboardPanel() {
                         type="search"
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Cari suara..."
+                        placeholder={t('soundboard.panel.searchPlaceholder')}
                         className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm sm:w-56"
                     />
                     <button
                         type="button"
                         onClick={() => window.api.soundboard.stopAll()}
-                        title="Stop All Sound"
+                        title={t('soundboard.panel.stopAll')}
                         className="flex shrink-0 items-center justify-center rounded-lg border border-border p-2.5 text-primary-600 hover:bg-surface-alt"
                     >
                         <StopIcon className="h-4 w-4" />

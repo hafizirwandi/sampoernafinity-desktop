@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 
 const REMEMBERED_EMAIL_KEY = 'sf.rememberedEmail';
 
 export function useAuth() {
+    const { t } = useLanguage();
     const [user, setUser] = useState(null);
     const [status, setStatus] = useState('loading'); // loading | login | dashboard
     const [oauthMessage, setOauthMessage] = useState('');
@@ -27,7 +29,7 @@ export function useAuth() {
             setOauthMessage('');
 
             if (!result.ok) {
-                setOauthError(result.error === 'account_disabled' ? 'Akun ini sudah dinonaktifkan.' : 'Gagal masuk. Coba lagi.');
+                setOauthError(result.error === 'account_disabled' ? t('login.oauthDisabled') : t('login.oauthFailed'));
                 return;
             }
 
@@ -39,7 +41,7 @@ export function useAuth() {
         });
 
         return unsubscribe;
-    }, []);
+    }, [t]);
 
     const login = useCallback(async ({ email, password, remember }) => {
         const session = await window.api.auth.login({ email, password });
@@ -57,9 +59,9 @@ export function useAuth() {
 
     const loginWithProvider = useCallback(async (provider) => {
         setOauthError('');
-        setOauthMessage(provider === 'google' ? 'Membuka browser untuk masuk dengan Google...' : 'Membuka browser untuk masuk dengan Discord...');
+        setOauthMessage(provider === 'google' ? t('login.oauthOpeningGoogle') : t('login.oauthOpeningDiscord'));
         await window.api.auth.loginWithProvider(provider);
-    }, []);
+    }, [t]);
 
     const clearOauthError = useCallback(() => setOauthError(''), []);
 

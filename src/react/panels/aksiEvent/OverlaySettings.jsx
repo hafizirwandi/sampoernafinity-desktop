@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ClipboardDocumentIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
 export default function OverlaySettings() {
+    const { t } = useLanguage();
     const [settings, setSettings] = useState(null);
     const [newScreenName, setNewScreenName] = useState('');
     const [statusByScreen, setStatusByScreen] = useState({});
@@ -67,16 +69,11 @@ export default function OverlaySettings() {
     return (
         <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-surface p-5">
-                <p className="text-sm text-text-muted">
-                    Untuk menampilkan aksi di OBS atau Live Studio, Anda memerlukan setidaknya satu layar overlay (widget). Anda dapat
-                    memetakan Aksi (gambar, peringatan, video...) ke Layar Overlay yang berbeda — masing-masing memiliki antreannya
-                    sendiri. Salin URL di bawah ini ke OBS (Sumber Browser).
-                </p>
+                <p className="text-sm text-text-muted">{t('aksiEvent.overlaySettings.description')}</p>
 
                 {!settings.port && (
                     <p className="mt-3 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm text-primary-700">
-                        Server overlay lokal belum aktif — coba tutup dan buka ulang aplikasi. Jika masih muncul, cek apakah aplikasi
-                        lain sedang memakai port yang sama.
+                        {t('aksiEvent.overlaySettings.serverInactive')}
                     </p>
                 )}
 
@@ -87,11 +84,9 @@ export default function OverlaySettings() {
                         onChange={toggleAudio}
                         className="rounded border-border text-primary-600 focus:ring-primary-600"
                     />
-                    Memutar audio melalui Overlay (suara live masuk ke OBS, tidak perlu pengambilan Audio Desktop)
+                    {t('aksiEvent.overlaySettings.playThroughOverlay')}
                 </label>
-                <p className="ml-6 text-xs text-text-muted">
-                    Layar tanpa Overlay yang terpasang akan kembali diputar di aplikasi sehingga Anda tidak akan kehilangan suara.
-                </p>
+                <p className="ml-6 text-xs text-text-muted">{t('aksiEvent.overlaySettings.playThroughOverlayHint')}</p>
 
                 <label className="mt-3 flex items-center gap-2 text-sm">
                     <input
@@ -100,21 +95,19 @@ export default function OverlaySettings() {
                         onChange={toggleFifo}
                         className="rounded border-border text-primary-600 focus:ring-primary-600"
                     />
-                    Antrian audio LIVE aktif (FIFO)
+                    {t('aksiEvent.overlaySettings.fifoToggle')}
                 </label>
-                <p className="ml-6 text-xs text-text-muted">
-                    Audio hadiah diputar satu per satu hingga selesai. Tes/Pemutaran Manual masih bisa dimainkan bersama.
-                </p>
+                <p className="ml-6 text-xs text-text-muted">{t('aksiEvent.overlaySettings.fifoHint')}</p>
             </div>
 
             <div className="overflow-x-auto rounded-2xl border border-border bg-surface">
                 <table className="w-full text-left text-sm">
                     <thead>
                         <tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
-                            <th className="py-2 px-4 font-medium">Nama Layar</th>
-                            <th className="py-2 px-4 font-medium">Link</th>
-                            <th className="py-2 px-4 font-medium">Maks. panjang antrian</th>
-                            <th className="py-2 px-4 font-medium">Status</th>
+                            <th className="py-2 px-4 font-medium">{t('aksiEvent.overlaySettings.tableScreenName')}</th>
+                            <th className="py-2 px-4 font-medium">{t('aksiEvent.overlaySettings.tableLink')}</th>
+                            <th className="py-2 px-4 font-medium">{t('aksiEvent.overlaySettings.tableMaxQueue')}</th>
+                            <th className="py-2 px-4 font-medium">{t('aksiEvent.overlaySettings.tableStatus')}</th>
                             <th className="py-2 px-4 font-medium"></th>
                         </tr>
                     </thead>
@@ -133,29 +126,29 @@ export default function OverlaySettings() {
                                             {copiedScreenId === screen.id ? (
                                                 <>
                                                     <CheckIcon className="h-3.5 w-3.5 text-green-600" />
-                                                    Tersalin
+                                                    {t('aksiEvent.overlaySettings.copied')}
                                                 </>
                                             ) : (
                                                 <>
                                                     <ClipboardDocumentIcon className="h-3.5 w-3.5" />
-                                                    Copy link
+                                                    {t('aksiEvent.overlaySettings.copyLink')}
                                                 </>
                                             )}
                                         </button>
                                     ) : (
-                                        <span className="text-xs text-text-muted">-</span>
+                                        <span className="text-xs text-text-muted">{t('common.dash')}</span>
                                     )}
                                 </td>
                                 <td className="py-2 px-4">{screen.maxQueueLength}</td>
                                 <td className={`py-2 px-4 text-xs font-medium ${statusByScreen[screen.id] ? 'text-green-600' : 'text-text-muted'}`}>
-                                    {statusByScreen[screen.id] ? 'Siap' : 'Tidak aktif'}
+                                    {statusByScreen[screen.id] ? t('aksiEvent.overlaySettings.statusReady') : t('aksiEvent.overlaySettings.statusInactive')}
                                 </td>
                                 <td className="py-2 px-4 text-right">
                                     {settings.screens.length > 1 && (
                                         <button
                                             type="button"
                                             onClick={() => removeScreen(screen.id)}
-                                            title="Hapus"
+                                            title={t('common.delete')}
                                             className="rounded-lg p-1.5 text-primary-600 hover:bg-surface-alt hover:text-primary-700"
                                         >
                                             <TrashIcon className="h-4 w-4" />
@@ -172,11 +165,11 @@ export default function OverlaySettings() {
                         type="text"
                         value={newScreenName}
                         onChange={(event) => setNewScreenName(event.target.value)}
-                        placeholder="Nama layar baru (opsional)"
+                        placeholder={t('aksiEvent.overlaySettings.newScreenPlaceholder')}
                         className="w-full max-w-xs rounded-lg border border-border bg-surface px-3 py-2 text-sm"
                     />
                     <button type="button" onClick={addScreen} className="shrink-0 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-surface-alt">
-                        + Tambah Layar
+                        {t('aksiEvent.overlaySettings.addScreen')}
                     </button>
                 </div>
             </div>

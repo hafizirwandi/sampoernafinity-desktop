@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 
 // Click the field, press a key combo, and it's converted to an Electron
 // Accelerator string (e.g. "Control+Shift+F1") for globalShortcut.register
@@ -43,6 +44,7 @@ function toAccelerator(event) {
 }
 
 export default function KeystrokeCapture({ value, onChange }) {
+    const { t } = useLanguage();
     const [listening, setListening] = useState(false);
 
     function handleKeyDown(event) {
@@ -59,16 +61,16 @@ export default function KeystrokeCapture({ value, onChange }) {
             <input
                 type="text"
                 readOnly
-                value={listening ? 'Tekan tombol...' : value || ''}
+                value={listening ? t('keystrokeCapture.listening') : value || ''}
                 onKeyDown={listening ? handleKeyDown : undefined}
                 onFocus={() => setListening(true)}
                 onBlur={() => setListening(false)}
-                placeholder="Klik lalu tekan tombol"
+                placeholder={t('keystrokeCapture.placeholder')}
                 className="w-48 rounded-lg border border-border bg-bg px-3 py-2 text-sm"
             />
             {value && (
                 <button type="button" onClick={() => onChange('')} className="text-xs text-text-muted hover:text-text">
-                    Hapus
+                    {t('keystrokeCapture.clear')}
                 </button>
             )}
         </div>

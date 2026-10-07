@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { useSidebar } from '../hooks/useSidebar.js';
 import { useActionPlayback } from '../hooks/useActionPlayback.js';
 import { useSoundboardPlayback } from '../hooks/useSoundboardPlayback.js';
@@ -15,20 +16,24 @@ import OverlayWidgetsPanel from '../panels/overlayWidgets/OverlayWidgetsPanel.js
 import SoundboardPanel from '../panels/soundboard/SoundboardPanel.jsx';
 import TtsPanel from '../panels/tts/TtsPanel.jsx';
 
-const PANEL_TITLES = {
-    dashboard: 'Dashboard',
-    analytics: 'Statistik Live',
-    packages: 'Paket & Harga',
-    balance: 'Saldo & Riwayat Transaksi',
-    gifts: 'Gift & Stiker',
-    'aksi-event': 'Aksi & Event',
-    overlay: 'Overlay',
-    soundboard: 'Suara',
-    tts: 'TTS / Baca Komentar',
-    connection: 'Connection',
-};
+function panelTitles(t) {
+    return {
+        dashboard: t('sidebar.navDashboard'),
+        analytics: t('analytics.title'),
+        packages: t('sidebar.navPackages'),
+        balance: t('sidebar.navBalance'),
+        gifts: t('sidebar.navGifts'),
+        'aksi-event': t('aksiEvent.panel.title'),
+        overlay: t('overlayWidgets.title'),
+        soundboard: t('soundboard.panel.title'),
+        tts: t('tts.panel.title'),
+        connection: t('sidebar.navConnection'),
+    };
+}
 
 export default function DashboardShell({ auth, theme }) {
+    const { t } = useLanguage();
+    const PANEL_TITLES = panelTitles(t);
     const sidebar = useSidebar();
     const [activePanel, setActivePanel] = useState('dashboard');
     useActionPlayback();

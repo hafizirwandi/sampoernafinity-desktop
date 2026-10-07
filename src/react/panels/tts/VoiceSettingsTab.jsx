@@ -3,6 +3,7 @@ import { PlayIcon, StarIcon, ComputerDesktopIcon } from '@heroicons/react/24/out
 import ToggleSwitch from '../../components/ToggleSwitch.jsx';
 import Toast from '../../components/Toast.jsx';
 import { useSpeechVoices } from '../../hooks/useSpeechVoices.js';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
 const GOOGLE_LANG_OPTIONS = [
     { value: 'id', label: 'Bahasa Indonesia' },
@@ -52,6 +53,7 @@ async function speakGoogle(text, lang, volume) {
 }
 
 export default function VoiceSettingsTab() {
+    const { t } = useLanguage();
     const voices = useSpeechVoices();
     const [settings, setSettings] = useState(null);
     const [savingVoice, setSavingVoice] = useState(false);
@@ -83,7 +85,7 @@ export default function VoiceSettingsTab() {
                 googleLang: settings.googleLang,
             });
             setSettings((prev) => ({ ...prev, ...next }));
-            setToastMessage('Pengaturan suara tersimpan');
+            setToastMessage(t('tts.voiceSettings.savedVoiceToast'));
         } finally {
             setSavingVoice(false);
         }
@@ -94,7 +96,7 @@ export default function VoiceSettingsTab() {
         try {
             const next = await window.api.tts.updateSettings({ template: settings.template });
             setSettings((prev) => ({ ...prev, ...next }));
-            setToastMessage('Template tersimpan');
+            setToastMessage(t('tts.voiceSettings.savedTemplateToast'));
         } finally {
             setSavingTemplate(false);
         }
@@ -106,7 +108,7 @@ export default function VoiceSettingsTab() {
                 await speakGoogle(testerText, settings.googleLang, settings.volume);
             } catch (error) {
                 console.error('Google TTS tester error:', error);
-                setToastMessage('Gagal memutar suara Google TTS');
+                setToastMessage(t('tts.voiceSettings.testerErrorToast'));
             }
         } else {
             speakSystem(testerText, settings, voices);
@@ -118,15 +120,15 @@ export default function VoiceSettingsTab() {
     return (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-border bg-surface p-5">
-                <h3 className="text-sm font-semibold">Pengaturan</h3>
+                <h3 className="text-sm font-semibold">{t('tts.voiceSettings.settingsHeading')}</h3>
 
                 <label className="mt-3 flex items-center gap-2 text-sm">
                     <ToggleSwitch checked={settings.enabled} onChange={() => patch({ enabled: !settings.enabled })} />
-                    Enabled
+                    {t('tts.voiceSettings.enabled')}
                 </label>
 
                 <div className="mt-4">
-                    <label className="mb-1.5 block text-sm font-medium">Sumber Suara</label>
+                    <label className="mb-1.5 block text-sm font-medium">{t('tts.voiceSettings.sourceLabel')}</label>
                     <div className="flex flex-wrap gap-2">
                         <button
                             type="button"
@@ -136,7 +138,7 @@ export default function VoiceSettingsTab() {
                             }`}
                         >
                             <StarIcon className="h-4 w-4" />
-                            Google (online · gratis)
+                            {t('tts.voiceSettings.sourceGoogle')}
                         </button>
                         <button
                             type="button"
@@ -146,20 +148,15 @@ export default function VoiceSettingsTab() {
                             }`}
                         >
                             <ComputerDesktopIcon className="h-4 w-4" />
-                            Suara Windows (offline · tanpa upload)
+                            {t('tts.voiceSettings.sourceSystem')}
                         </button>
                     </div>
-                    {isGoogle && (
-                        <p className="mt-1.5 text-xs text-text-muted">
-                            Tidak resmi (endpoint publik Google Translate) — butuh internet, maksimal ±200 karakter per potongan
-                            (komentar panjang otomatis dipecah), dan tidak mendukung pengaturan speed/pitch.
-                        </p>
-                    )}
+                    {isGoogle && <p className="mt-1.5 text-xs text-text-muted">{t('tts.voiceSettings.googleHint')}</p>}
                 </div>
 
                 {isGoogle ? (
                     <div className="mt-4">
-                        <label className="mb-1.5 block text-sm font-medium">Bahasa</label>
+                        <label className="mb-1.5 block text-sm font-medium">{t('tts.voiceSettings.languageLabel')}</label>
                         <select
                             value={settings.googleLang}
                             onChange={(event) => patch({ googleLang: event.target.value })}
@@ -175,29 +172,29 @@ export default function VoiceSettingsTab() {
                 ) : (
                     <>
                         <div className="mt-4">
-                            <label className="mb-1.5 block text-sm font-medium">Suara</label>
+                            <label className="mb-1.5 block text-sm font-medium">{t('tts.voiceSettings.voiceLabel')}</label>
                             <select
                                 value={settings.voiceURI}
                                 onChange={(event) => patch({ voiceURI: event.target.value })}
                                 className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm"
                             >
-                                <option value="">Default</option>
+                                <option value="">{t('common.default')}</option>
                                 {voices.map((voice) => (
                                     <option key={voice.voiceURI} value={voice.voiceURI}>
                                         {voice.name} ({voice.lang})
                                     </option>
                                 ))}
                             </select>
-                            {!voices.length && <p className="mt-1 text-xs text-text-muted">Tidak ada suara terdeteksi dari sistem.</p>}
+                            {!voices.length && <p className="mt-1 text-xs text-text-muted">{t('tts.voiceSettings.noVoicesDetected')}</p>}
                         </div>
 
                         <label className="mt-4 flex items-center gap-2 text-sm">
                             <ToggleSwitch checked={settings.randomVoice} onChange={() => patch({ randomVoice: !settings.randomVoice })} />
-                            Random Voice
+                            {t('tts.voiceSettings.randomVoice')}
                         </label>
 
                         <div className="mt-4">
-                            <label className="mb-1.5 block text-sm font-medium">Speed (default: 50)</label>
+                            <label className="mb-1.5 block text-sm font-medium">{t('tts.voiceSettings.speedLabel')}</label>
                             <input
                                 type="number"
                                 min="1"
@@ -209,7 +206,7 @@ export default function VoiceSettingsTab() {
                         </div>
 
                         <div className="mt-4">
-                            <label className="mb-1.5 block text-sm font-medium">Pitch (default: 50)</label>
+                            <label className="mb-1.5 block text-sm font-medium">{t('tts.voiceSettings.pitchLabel')}</label>
                             <input
                                 type="number"
                                 min="0"
@@ -223,7 +220,7 @@ export default function VoiceSettingsTab() {
                 )}
 
                 <div className="mt-4">
-                    <label className="mb-1.5 block text-sm font-medium">Volume (default: 100): {settings.volume}%</label>
+                    <label className="mb-1.5 block text-sm font-medium">{t('tts.voiceSettings.volumeLabel', { value: settings.volume })}</label>
                     <input
                         type="range"
                         min="0"
@@ -240,13 +237,13 @@ export default function VoiceSettingsTab() {
                     disabled={savingVoice}
                     className="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
                 >
-                    {savingVoice ? 'Menyimpan...' : 'Simpan'}
+                    {savingVoice ? t('common.saving') : t('common.save')}
                 </button>
             </div>
 
             <div className="space-y-4">
                 <div className="rounded-2xl border border-border bg-surface p-5">
-                    <h3 className="text-sm font-semibold">Tester</h3>
+                    <h3 className="text-sm font-semibold">{t('tts.voiceSettings.testerHeading')}</h3>
                     <div className="mt-3 flex items-center gap-2">
                         <input
                             type="text"
@@ -260,27 +257,27 @@ export default function VoiceSettingsTab() {
                             className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-surface-alt"
                         >
                             <PlayIcon className="h-4 w-4" />
-                            Play
+                            {t('tts.voiceSettings.playButton')}
                         </button>
                     </div>
                 </div>
 
                 <div className="rounded-2xl border border-border bg-surface p-5">
-                    <h3 className="text-sm font-semibold">Template</h3>
+                    <h3 className="text-sm font-semibold">{t('tts.voiceSettings.templateHeading')}</h3>
                     <input
                         type="text"
                         value={settings.template}
                         onChange={(event) => patch({ template: event.target.value })}
                         className="mt-3 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm"
                     />
-                    <p className="mt-1.5 text-xs text-text-muted">Placeholder: {'{username} {nickname} {comment}'}</p>
+                    <p className="mt-1.5 text-xs text-text-muted">{t('tts.voiceSettings.templatePlaceholderHint')}</p>
                     <button
                         type="button"
                         onClick={saveTemplate}
                         disabled={savingTemplate}
                         className="mt-3 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
                     >
-                        {savingTemplate ? 'Menyimpan...' : 'Simpan'}
+                        {savingTemplate ? t('common.saving') : t('common.save')}
                     </button>
                 </div>
             </div>

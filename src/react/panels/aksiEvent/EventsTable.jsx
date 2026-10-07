@@ -1,13 +1,16 @@
 import { PencilSquareIcon, DocumentDuplicateIcon, TrashIcon } from '@heroicons/react/24/outline';
 import RowIconButton from '../../components/RowIconButton.jsx';
 import ToggleSwitch from '../../components/ToggleSwitch.jsx';
-import { AUDIENCE_LABELS, TRIGGER_LABELS } from './constants.js';
+import { audienceLabel, triggerLabel } from './constants.js';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
 export default function EventsTable({ events, actions, onEdit, onToggle, onDuplicate, onRemove }) {
+    const { t } = useLanguage();
+
     function actionNames(event) {
         const ids = [...(event.actionIds || []), ...(event.randomActionIds || [])];
         const names = ids.map((id) => actions.find((a) => a.id === id)?.name).filter(Boolean);
-        return names.length ? names.join(', ') : '-';
+        return names.length ? names.join(', ') : t('common.dash');
     }
 
     return (
@@ -15,10 +18,10 @@ export default function EventsTable({ events, actions, onEdit, onToggle, onDupli
             <table className="w-full text-left text-sm">
                 <thead>
                     <tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
-                        <th className="py-2 px-4 font-medium">Status</th>
-                        <th className="py-2 px-4 font-medium">Pengguna</th>
-                        <th className="py-2 px-4 font-medium">Pemicu</th>
-                        <th className="py-2 px-4 font-medium">Aksi</th>
+                        <th className="py-2 px-4 font-medium">{t('aksiEvent.eventsTable.status')}</th>
+                        <th className="py-2 px-4 font-medium">{t('aksiEvent.eventsTable.audience')}</th>
+                        <th className="py-2 px-4 font-medium">{t('aksiEvent.eventsTable.trigger')}</th>
+                        <th className="py-2 px-4 font-medium">{t('aksiEvent.eventsTable.actions')}</th>
                         <th className="py-2 px-4 font-medium"></th>
                     </tr>
                 </thead>
@@ -26,7 +29,7 @@ export default function EventsTable({ events, actions, onEdit, onToggle, onDupli
                     {!events.length ? (
                         <tr>
                             <td colSpan={5} className="py-6 text-center text-text-muted">
-                                Belum ada Event. Klik &quot;Buat Event baru&quot; untuk membuatnya.
+                                {t('aksiEvent.eventsTable.empty')}
                             </td>
                         </tr>
                     ) : (
@@ -36,21 +39,21 @@ export default function EventsTable({ events, actions, onEdit, onToggle, onDupli
                                     <ToggleSwitch
                                         checked={event.enabled}
                                         onChange={() => onToggle(event.id)}
-                                        title={event.enabled ? 'Aktif' : 'Non-aktif'}
+                                        title={event.enabled ? t('common.active') : t('common.inactive')}
                                     />
                                 </td>
-                                <td className="py-2 px-4">{AUDIENCE_LABELS[event.audience?.type] || event.audience?.type}</td>
-                                <td className="py-2 px-4">{event.name || TRIGGER_LABELS[event.trigger?.type] || event.trigger?.type}</td>
+                                <td className="py-2 px-4">{audienceLabel(t, event.audience?.type)}</td>
+                                <td className="py-2 px-4">{event.name || triggerLabel(t, event.trigger?.type)}</td>
                                 <td className="py-2 px-4">{actionNames(event)}</td>
                                 <td className="py-2 px-4">
                                     <div className="flex items-center justify-end gap-1">
-                                        <RowIconButton onClick={() => onEdit(event)} title="Ubah">
+                                        <RowIconButton onClick={() => onEdit(event)} title={t('common.edit')}>
                                             <PencilSquareIcon className="h-4 w-4" />
                                         </RowIconButton>
-                                        <RowIconButton onClick={() => onDuplicate(event.id)} title="Duplikat">
+                                        <RowIconButton onClick={() => onDuplicate(event.id)} title={t('common.duplicate')}>
                                             <DocumentDuplicateIcon className="h-4 w-4" />
                                         </RowIconButton>
-                                        <RowIconButton onClick={() => onRemove(event.id)} title="Hapus" tone="danger">
+                                        <RowIconButton onClick={() => onRemove(event.id)} title={t('common.delete')} tone="danger">
                                             <TrashIcon className="h-4 w-4" />
                                         </RowIconButton>
                                     </div>

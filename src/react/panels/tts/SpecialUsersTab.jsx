@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import ToggleSwitch from '../../components/ToggleSwitch.jsx';
 import { useSpeechVoices } from '../../hooks/useSpeechVoices.js';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
 export default function SpecialUsersTab() {
+    const { t } = useLanguage();
     const voices = useSpeechVoices();
     const [users, setUsers] = useState([]);
 
@@ -32,11 +34,8 @@ export default function SpecialUsersTab() {
 
     return (
         <div className="rounded-2xl border border-border bg-surface p-5">
-            <h3 className="text-sm font-semibold">Pengguna Spesial</h3>
-            <p className="mt-1 text-sm text-text-muted">
-                Atur suara per orang di sini, atau larang pengguna tertentu agar tidak dibacakan sama sekali — pengaturan di sini
-                selalu menang atas aturan &quot;Siapa yang bisa menggunakan?&quot;.
-            </p>
+            <h3 className="text-sm font-semibold">{t('tts.specialUsers.heading')}</h3>
+            <p className="mt-1 text-sm text-text-muted">{t('tts.specialUsers.description')}</p>
 
             <button
                 type="button"
@@ -44,7 +43,7 @@ export default function SpecialUsersTab() {
                 className="mt-4 flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-surface-alt"
             >
                 <PlusIcon className="h-4 w-4" />
-                Tambah Pengguna
+                {t('tts.specialUsers.addUser')}
             </button>
 
             <div className="mt-4 overflow-x-auto">
@@ -52,19 +51,19 @@ export default function SpecialUsersTab() {
                     <thead>
                         <tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
                             <th className="py-2 pr-4 font-medium"></th>
-                            <th className="py-2 pr-4 font-medium">Username</th>
-                            <th className="py-2 pr-4 font-medium">Allowed</th>
-                            <th className="py-2 pr-4 font-medium">Bahasa</th>
-                            <th className="py-2 pr-4 font-medium">Random Voice</th>
-                            <th className="py-2 pr-4 font-medium">Speed</th>
-                            <th className="py-2 pr-4 font-medium">Pitch</th>
+                            <th className="py-2 pr-4 font-medium">{t('tts.specialUsers.tableUsername')}</th>
+                            <th className="py-2 pr-4 font-medium">{t('tts.specialUsers.tableAllowed')}</th>
+                            <th className="py-2 pr-4 font-medium">{t('tts.specialUsers.tableLanguage')}</th>
+                            <th className="py-2 pr-4 font-medium">{t('tts.specialUsers.tableRandomVoice')}</th>
+                            <th className="py-2 pr-4 font-medium">{t('tts.specialUsers.tableSpeed')}</th>
+                            <th className="py-2 pr-4 font-medium">{t('tts.specialUsers.tablePitch')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {!users.length ? (
                             <tr>
                                 <td colSpan={7} className="py-4 text-center text-text-muted">
-                                    Tidak ada data
+                                    {t('common.noData')}
                                 </td>
                             </tr>
                         ) : (
@@ -94,7 +93,7 @@ export default function SpecialUsersTab() {
                                             onChange={(event) => saveField(user.id, { voiceURI: event.target.value })}
                                             className="w-44 rounded-lg border border-border bg-bg px-2 py-1.5 text-sm"
                                         >
-                                            <option value="">Default</option>
+                                            <option value="">{t('common.default')}</option>
                                             {voices.map((voice) => (
                                                 <option key={voice.voiceURI} value={voice.voiceURI}>
                                                     {voice.name} ({voice.lang})

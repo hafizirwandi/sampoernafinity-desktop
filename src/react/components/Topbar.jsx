@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 
 export default function Topbar({ heading, onOpenSidebar, theme, auth }) {
+    const { lang, toggleLang, t } = useLanguage();
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
     const menuBtnRef = useRef(null);
@@ -32,8 +34,18 @@ export default function Topbar({ heading, onOpenSidebar, theme, auth }) {
 
             <button
                 type="button"
+                onClick={toggleLang}
+                title={t('topbar.languageToggle')}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 py-2 text-sm font-medium text-text-muted hover:bg-surface-alt hover:text-text"
+            >
+                <span>{lang === 'id' ? '🇮🇩' : '🇬🇧'}</span>
+                <span className="uppercase">{lang}</span>
+            </button>
+
+            <button
+                type="button"
                 onClick={theme.toggleTheme}
-                title="Ganti tema terang/gelap"
+                title={t('topbar.themeToggle')}
                 className="inline-flex items-center justify-center rounded-lg border border-border p-2 text-text-muted hover:bg-surface-alt hover:text-text"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-5 w-5 dark:hidden">
@@ -64,7 +76,7 @@ export default function Topbar({ heading, onOpenSidebar, theme, auth }) {
                         }}
                         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted hover:bg-surface-alt hover:text-text"
                     >
-                        Keluar
+                        {t('topbar.logout')}
                     </button>
                 </div>
             </div>

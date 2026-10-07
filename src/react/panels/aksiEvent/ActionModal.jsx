@@ -2,16 +2,12 @@ import { useState } from 'react';
 import Modal from '../../components/Modal.jsx';
 import BehaviorFields from './BehaviorFields.jsx';
 import ActionAdvancedSettings from './ActionAdvancedSettings.jsx';
+import { BEHAVIOR_TYPE_KEYS } from './ActionsTable.jsx';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
-const BEHAVIOR_TYPES = [
-    { type: 'play_audio', label: 'Putar Audio' },
-    { type: 'tts', label: 'Baca Teks (TTS)' },
-    { type: 'show_media', label: 'Tampilkan gambar / GIF / video (di OBS Overlay)' },
-    { type: 'show_alert', label: 'Tampilkan Peringatan (Pengguna + Teks di Overlay)' },
-    { type: 'webhook', label: 'Memicu WebHook' },
-    { type: 'keystroke', label: 'Simulasikan Penekanan Tombol' },
-    { type: 'minecraft_command', label: 'Jalankan Perintah Minecraft' },
-];
+function behaviorTypes(t) {
+    return BEHAVIOR_TYPE_KEYS.map((type) => ({ type, label: t(`aksiEvent.behaviorType.${type}`) }));
+}
 
 function defaultBehaviorConfig(type) {
     switch (type) {
@@ -37,23 +33,23 @@ function defaultBehaviorConfig(type) {
 // Each behavior type has its own idea of "empty" (a file/URL pair, a line
 // list, plain text, ...), so it needs its own required-field check rather
 // than a single generic emptiness test.
-function validateBehavior(behavior) {
+function validateBehavior(t, behavior) {
     switch (behavior.type) {
         case 'play_audio':
         case 'show_media': {
             const value = behavior.source === 'url' ? behavior.url : behavior.filePath;
-            return value && value.trim() ? null : 'Pilih berkas atau isi URL.';
+            return value && value.trim() ? null : t('aksiEvent.actionModal.validationFileOrUrl');
         }
         case 'tts':
-            return behavior.message && behavior.message.trim() ? null : 'Isi pesan yang akan dibaca.';
+            return behavior.message && behavior.message.trim() ? null : t('aksiEvent.actionModal.validationTtsMessage');
         case 'show_alert':
-            return behavior.text && behavior.text.trim() ? null : 'Isi teks peringatan.';
+            return behavior.text && behavior.text.trim() ? null : t('aksiEvent.actionModal.validationAlertText');
         case 'webhook':
-            return behavior.url && behavior.url.trim() ? null : 'Isi URL webhook.';
+            return behavior.url && behavior.url.trim() ? null : t('aksiEvent.actionModal.validationWebhookUrl');
         case 'keystroke':
-            return behavior.keys && behavior.keys.trim() ? null : 'Isi tombol yang akan ditekan.';
+            return behavior.keys && behavior.keys.trim() ? null : t('aksiEvent.actionModal.validationKeystrokeKeys');
         case 'minecraft_command':
-            return (behavior.lines || []).some((line) => line.trim()) ? null : 'Isi minimal satu perintah.';
+            return (behavior.lines || []).some((line) => line.trim()) ? null : t('aksiEvent.actionModal.validationMinecraftLines');
         default:
             return null;
     }
@@ -73,6 +69,8 @@ const DEFAULT_FORM = {
 };
 
 export default function ActionModal({ action, screens, onClose, onSaved }) {
+    const { t } = useLanguage();
+    const BEHAVIOR_TYPES = behaviorTypes(t);
     const isEdit = Boolean(action);
     const [form, setForm] = useState(() => ({
         ...DEFAULT_FORM,
@@ -117,14 +115,14 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
         const nextErrors = {};
 
         if (!form.name.trim()) {
-            nextErrors.name = 'Nama aksi wajib diisi.';
+            nextErrors.name = t('aksiEvent.actionModal.errorName');
         }
 
         if (!form.behaviors.length) {
-            nextErrors.behaviors = 'Pilih minimal satu perilaku untuk aksi ini.';
+            nextErrors.behaviors = t('aksiEvent.actionModal.errorBehaviors');
         } else {
             for (const behavior of form.behaviors) {
-                const message = validateBehavior(behavior);
+                const message = validateBehavior(t, behavior);
                 if (message) nextErrors[behavior.type] = message;
             }
         }
@@ -157,7 +155,7 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
             const saved = isEdit ? await window.api.actions.update(action.id, payload) : await window.api.actions.create(payload);
             onSaved(saved);
         } catch (err) {
-            setSubmitError(err?.message || 'Gagal menyimpan aksi.');
+            setSubmitError(err?.message || t('aksiEvent.actionModal.errorSaveGeneric'));
         } finally {
             setSaving(false);
         }
@@ -165,12 +163,12 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
 
     return (
         <Modal
-            title={isEdit ? 'Ubah Aksi' : 'Aksi Baru'}
+            title={isEdit ? t('aksiEvent.actionModal.titleEdit') : t('aksiEvent.actionModal.titleNew')}
             onClose={onClose}
             footer={
                 <>
                     <button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-alt">
-                        Membatalkan
+                        {t('common.cancel')}
                     </button>
                     <button
                         type="button"
@@ -178,14 +176,14 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
                         disabled={saving}
                         className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
                     >
-                        {saving ? 'Menyimpan...' : 'Simpan Aksi'}
+                        {saving ? t('common.saving') : t('aksiEvent.actionModal.saveButton')}
                     </button>
                 </>
             }
         >
             <div>
                 <label className="mb-1.5 block text-sm font-medium">
-                    Nama aksi <span className="text-primary-600">*</span>
+                    {t('aksiEvent.actionModal.nameLabel')} <span className="text-primary-600">*</span>
                 </label>
                 <input
                     type="text"
@@ -194,7 +192,7 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
                         patch({ name: event.target.value });
                         clearFieldError('name');
                     }}
-                    placeholder="misalnya Melon air"
+                    placeholder={t('aksiEvent.actionModal.namePlaceholder')}
                     className={`w-full rounded-lg border bg-bg px-3 py-2 text-sm ${fieldErrors.name ? 'border-2 border-primary-600' : 'border-border'}`}
                 />
                 {fieldErrors.name && <p className="mt-1 text-xs text-primary-600">{fieldErrors.name}</p>}
@@ -203,7 +201,7 @@ export default function ActionModal({ action, screens, onClose, onSaved }) {
             <div className="mt-5">
                 <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
                     <span className="inline-block h-4 w-1 rounded bg-primary-600"></span>
-                    Apa yang harus terjadi? (Anda dapat memilih beberapa)
+                    {t('aksiEvent.actionModal.whatHappensLabel')}
                 </p>
                 {fieldErrors.behaviors && <p className="mb-2 text-xs text-primary-600">{fieldErrors.behaviors}</p>}
 

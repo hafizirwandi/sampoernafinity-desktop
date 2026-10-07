@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { formatDateTime, formatNumber } from '../lib/format.js';
 import { ipcErrorMessage } from '../lib/ipc.js';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 
 const GIFTS_PAGE_SIZE = 60;
 
-function GiftCard({ gift, categoryName }) {
+function GiftCard({ gift, categoryName, t }) {
     return (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-surface p-4 text-center">
             <img src={gift.imageSrc || gift.imageUrl} alt={gift.name} loading="lazy" className="h-14 w-14 rounded-lg object-contain" />
             <p className="line-clamp-2 text-sm font-medium">{gift.name}</p>
-            <p className="text-xs font-medium text-yellow-600">{formatNumber(gift.coin)} Coin</p>
+            <p className="text-xs font-medium text-yellow-600">
+                {formatNumber(gift.coin)} {t('gifts.coin')}
+            </p>
             <p className="text-xs text-text-muted">{categoryName}</p>
             <p className="text-xs text-text-muted">ID: {gift.tiktokId}</p>
         </div>
@@ -17,6 +20,7 @@ function GiftCard({ gift, categoryName }) {
 }
 
 export default function GiftsPanel() {
+    const { t } = useLanguage();
     const [catalog, setCatalog] = useState({ syncedAt: null, categories: [], gifts: [] });
     const [currentType, setCurrentType] = useState('gift');
     const [searchInput, setSearchInput] = useState('');
@@ -47,7 +51,7 @@ export default function GiftsPanel() {
             const next = await window.api.gifts.sync();
             setCatalog(next);
         } catch (error) {
-            setSyncError(ipcErrorMessage(error) || 'Gagal menyinkronkan data gift.');
+            setSyncError(ipcErrorMessage(error) || t('gifts.syncError'));
         } finally {
             unsubscribe();
             setSyncing(false);
@@ -73,7 +77,7 @@ export default function GiftsPanel() {
 
     function categoryNameById(id) {
         const category = catalog.categories.find((c) => c.id === id);
-        return category ? category.name : 'Tanpa Kategori';
+        return category ? category.name : t('gifts.noCategory');
     }
 
     const filteredItems = useMemo(() => {
@@ -100,8 +104,8 @@ export default function GiftsPanel() {
         <div className="space-y-6">
             <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 className="text-lg font-semibold">TikTok Gift &amp; Stiker</h2>
-                    <p className="mt-1 text-sm text-text-muted">Database gift &amp; stiker TikTok, disinkronkan dari server.</p>
+                    <h2 className="text-lg font-semibold">{t('gifts.title')}</h2>
+                    <p className="mt-1 text-sm text-text-muted">{t('gifts.subtitle')}</p>
                 </div>
 
                 <button
@@ -116,15 +120,15 @@ export default function GiftsPanel() {
                     <span>
                         {syncing
                             ? syncProgress
-                                ? `Menyinkronkan... (${formatNumber(syncProgress.done)}/${formatNumber(syncProgress.total)})`
-                                : 'Menyinkronkan...'
-                            : 'Update Gift'}
+                                ? t('gifts.syncingProgress', { done: formatNumber(syncProgress.done), total: formatNumber(syncProgress.total) })
+                                : t('gifts.syncing')
+                            : t('gifts.updateButton')}
                     </span>
                 </button>
             </div>
 
             <p className="text-sm text-green-600">
-                {catalog.syncedAt ? `Terakhir disinkronkan: ${formatDateTime(catalog.syncedAt)}` : 'Membutuhkan data gift terbaru? Klik tombol Update Gift di atas.'}
+                {catalog.syncedAt ? t('gifts.lastSynced', { date: formatDateTime(catalog.syncedAt) }) : t('gifts.needSync')}
             </p>
             {syncError && <p className="rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm text-primary-700">{syncError}</p>}
 
@@ -140,7 +144,7 @@ export default function GiftsPanel() {
                                 onClick={() => handleTabChange(type)}
                                 className={`rounded-md px-4 py-1.5 text-sm font-medium ${active ? 'bg-primary-600 text-white' : 'text-text-muted'}`}
                             >
-                                {type === 'gift' ? 'Gift' : 'Stiker'}
+                                {type === 'gift' ? t('gifts.tabGift') : t('gifts.tabSticker')}
                             </button>
                         );
                     })}
@@ -151,7 +155,7 @@ export default function GiftsPanel() {
                         type="search"
                         value={searchInput}
                         onChange={(event) => setSearchInput(event.target.value)}
-                        placeholder="Cari nama gift/stiker..."
+                        placeholder={t('gifts.searchPlaceholder')}
                         className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm sm:w-56"
                     />
                     <select
@@ -159,7 +163,7 @@ export default function GiftsPanel() {
                         onChange={(event) => handleCategoryChange(event.target.value)}
                         className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm sm:w-48"
                     >
-                        <option value="all">Semua Kategori</option>
+                        <option value="all">{t('gifts.allCategories')}</option>
                         {categoriesForType.map((category) => (
                             <option key={category.id} value={String(category.id)}>
                                 {category.name}
@@ -171,17 +175,13 @@ export default function GiftsPanel() {
 
             <div className="space-y-6">
                 {!catalog.gifts.length ? (
-                    <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-text-muted">
-                        Belum ada data. Klik &quot;Update Gift&quot; untuk sinkron dari server.
-                    </div>
+                    <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-text-muted">{t('gifts.emptyCatalog')}</div>
                 ) : !filteredItems.length ? (
-                    <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-text-muted">
-                        Tidak ada gift/stiker yang cocok dengan pencarian atau filter.
-                    </div>
+                    <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-text-muted">{t('gifts.emptyFiltered')}</div>
                 ) : (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                         {pageItems.map((gift) => (
-                            <GiftCard key={gift.id} gift={gift} categoryName={categoryNameById(gift.categoryId)} />
+                            <GiftCard key={gift.id} gift={gift} categoryName={categoryNameById(gift.categoryId)} t={t} />
                         ))}
                     </div>
                 )}
@@ -195,10 +195,10 @@ export default function GiftsPanel() {
                         onClick={() => setPage(clampedPage - 1)}
                         className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        Sebelumnya
+                        {t('gifts.previous')}
                     </button>
                     <span className="text-xs text-text-muted">
-                        Halaman {clampedPage} dari {totalPages} ({formatNumber(filteredItems.length)} item)
+                        {t('gifts.pageInfo', { page: clampedPage, totalPages, count: formatNumber(filteredItems.length) })}
                     </span>
                     <button
                         type="button"
@@ -206,7 +206,7 @@ export default function GiftsPanel() {
                         onClick={() => setPage(clampedPage + 1)}
                         className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        Berikutnya
+                        {t('gifts.next')}
                     </button>
                 </div>
             )}

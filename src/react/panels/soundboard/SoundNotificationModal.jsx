@@ -4,7 +4,8 @@ import SearchMultiSelect from '../../components/SearchMultiSelect.jsx';
 import SoundSourcePicker from '../../components/SoundSourcePicker.jsx';
 import KeystrokeCapture from '../../components/KeystrokeCapture.jsx';
 import { VolumeSlider } from '../aksiEvent/BehaviorFields.jsx';
-import { AUDIENCE_TYPES, TRIGGER_TYPES, TRIGGER_LABELS } from '../aksiEvent/constants.js';
+import { audienceTypes, triggerTypes, triggerLabel } from '../aksiEvent/constants.js';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
 function defaultTriggerConfig(type) {
     switch (type) {
@@ -32,6 +33,9 @@ const DEFAULT_FORM = {
 };
 
 export default function SoundNotificationModal({ sound, onClose, onSaved }) {
+    const { t } = useLanguage();
+    const AUDIENCE_TYPES = audienceTypes(t);
+    const TRIGGER_TYPES = triggerTypes(t);
     const isEdit = Boolean(sound);
     const [form, setForm] = useState(() => ({ ...DEFAULT_FORM, ...sound }));
     const [gifts, setGifts] = useState([]);
@@ -59,12 +63,12 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
 
         const hasSound = form.sound.source === 'url' ? Boolean(form.sound.url) : Boolean(form.sound.filePath);
         if (!hasSound) {
-            setError('Pilih berkas suara atau ambil dari Sound Library.');
+            setError(t('soundboard.modal.errorNoSound'));
             return;
         }
 
         if (form.audience.type === 'specific' && !(form.audience.usernames || []).length) {
-            setError('Isi minimal satu username penampil.');
+            setError(t('soundboard.modal.errorNoUsernames'));
             return;
         }
 
@@ -72,7 +76,7 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
 
         const payload = {
             ...form,
-            name: form.name.trim() || TRIGGER_LABELS[form.trigger.type] || '',
+            name: form.name.trim() || triggerLabel(t, form.trigger.type) || '',
             volume: Number(form.volume) || 0,
         };
 
@@ -80,7 +84,7 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
             const saved = isEdit ? await window.api.soundboard.update(sound.id, payload) : await window.api.soundboard.create(payload);
             onSaved(saved);
         } catch (err) {
-            setError(err?.message || 'Gagal menyimpan suara.');
+            setError(err?.message || t('soundboard.modal.errorSaveGeneric'));
         } finally {
             setSaving(false);
         }
@@ -88,12 +92,12 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
 
     return (
         <Modal
-            title={isEdit ? 'Ubah Notifikasi Suara' : 'Notifikasi Suara Baru'}
+            title={isEdit ? t('soundboard.modal.titleEdit') : t('soundboard.modal.titleNew')}
             onClose={onClose}
             footer={
                 <>
                     <button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-alt">
-                        Membatalkan
+                        {t('common.cancel')}
                     </button>
                     <button
                         type="button"
@@ -101,18 +105,18 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
                         disabled={saving}
                         className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
                     >
-                        {saving ? 'Menyimpan...' : 'Simpan Suara'}
+                        {saving ? t('common.saving') : t('soundboard.modal.saveButton')}
                     </button>
                 </>
             }
         >
             <div>
-                <label className="mb-1.5 block text-sm font-medium">Nama (opsional)</label>
+                <label className="mb-1.5 block text-sm font-medium">{t('soundboard.modal.nameLabel')}</label>
                 <input
                     type="text"
                     value={form.name}
                     onChange={(evt) => patch({ name: evt.target.value })}
-                    placeholder="Biarkan kosong — diberi nama otomatis berdasarkan pemicu"
+                    placeholder={t('aksiEvent.eventModal.namePlaceholder')}
                     className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm"
                 />
             </div>
@@ -120,7 +124,7 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
             <div className="mt-5">
                 <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
                     <span className="inline-block h-4 w-1 rounded bg-primary-600"></span>
-                    Siapa yang dapat memicu suara ini?
+                    {t('soundboard.modal.whoHeading')}
                 </p>
                 <div className="space-y-1.5">
                     {AUDIENCE_TYPES.map((a) => (
@@ -152,7 +156,7 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
                                 },
                             })
                         }
-                        placeholder="username1, username2"
+                        placeholder={t('aksiEvent.eventModal.usernamesPlaceholder')}
                         className="mt-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm"
                     />
                 )}
@@ -161,28 +165,28 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
             <div className="mt-5">
                 <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
                     <span className="inline-block h-4 w-1 rounded bg-primary-600"></span>
-                    Apa yang memicu suara ini?
+                    {t('soundboard.modal.whatHeading')}
                 </p>
                 <div className="space-y-1.5">
-                    {TRIGGER_TYPES.map((t) => {
-                        const active = form.trigger.type === t.type;
+                    {TRIGGER_TYPES.map((trig) => {
+                        const active = form.trigger.type === trig.type;
 
                         return (
-                            <div key={t.type} className={`rounded-xl border p-3 ${active ? 'border-primary-600' : 'border-border'}`}>
+                            <div key={trig.type} className={`rounded-xl border p-3 ${active ? 'border-primary-600' : 'border-border'}`}>
                                 <label className="flex items-center gap-2 text-sm">
                                     <input
                                         type="radio"
                                         name="trigger"
                                         checked={active}
-                                        onChange={() => setTriggerType(t.type)}
+                                        onChange={() => setTriggerType(trig.type)}
                                         className="text-primary-600 focus:ring-primary-600"
                                     />
-                                    {t.label}
+                                    {trig.label}
                                 </label>
 
-                                {active && t.type === 'like' && (
+                                {active && trig.type === 'like' && (
                                     <div className="mt-2 pl-6">
-                                        <label className="mb-1 block text-xs font-medium text-text-muted">Minimal jumlah like</label>
+                                        <label className="mb-1 block text-xs font-medium text-text-muted">{t('aksiEvent.eventModal.minLikesLabel')}</label>
                                         <input
                                             type="number"
                                             min="1"
@@ -193,9 +197,9 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
                                     </div>
                                 )}
 
-                                {active && t.type === 'chat_keyword' && (
+                                {active && trig.type === 'chat_keyword' && (
                                     <div className="mt-2 pl-6">
-                                        <label className="mb-1 block text-xs font-medium text-text-muted">Kata kunci</label>
+                                        <label className="mb-1 block text-xs font-medium text-text-muted">{t('aksiEvent.eventModal.keywordLabel')}</label>
                                         <input
                                             type="text"
                                             value={form.trigger.keyword}
@@ -205,9 +209,9 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
                                     </div>
                                 )}
 
-                                {active && t.type === 'gift_min_coin' && (
+                                {active && trig.type === 'gift_min_coin' && (
                                     <div className="mt-2 pl-6">
-                                        <label className="mb-1 block text-xs font-medium text-text-muted">Nilai minimum (koin)</label>
+                                        <label className="mb-1 block text-xs font-medium text-text-muted">{t('aksiEvent.eventModal.minCoinsLabel')}</label>
                                         <input
                                             type="number"
                                             min="1"
@@ -218,7 +222,7 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
                                     </div>
                                 )}
 
-                                {active && t.type === 'gift_specific' && (
+                                {active && trig.type === 'gift_specific' && (
                                     <div className="mt-2 pl-6">
                                         <SearchMultiSelect
                                             items={gifts}
@@ -226,7 +230,7 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
                                             onChange={(giftIds) => patch({ trigger: { ...form.trigger, giftIds } })}
                                             getId={(g) => g.tiktokId}
                                             getLabel={(g) => g.name}
-                                            placeholder="Cari gift..."
+                                            placeholder={t('common.searchGift')}
                                         />
                                     </div>
                                 )}
@@ -239,7 +243,7 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
             <div className="mt-5">
                 <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
                     <span className="inline-block h-4 w-1 rounded bg-primary-600"></span>
-                    Suara
+                    {t('soundboard.modal.soundHeading')}
                 </p>
                 <SoundSourcePicker value={form.sound} onChange={(fields) => patch({ sound: { ...form.sound, ...fields } })} />
                 <VolumeSlider value={form.volume} onChange={(volume) => patch({ volume })} />
@@ -248,11 +252,9 @@ export default function SoundNotificationModal({ sound, onClose, onSaved }) {
             <div className="mt-5">
                 <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
                     <span className="inline-block h-4 w-1 rounded bg-primary-600"></span>
-                    Tombol pintas (opsional)
+                    {t('soundboard.modal.hotkeyHeading')}
                 </p>
-                <p className="mb-2 text-xs text-text-muted">
-                    Suara ini juga bisa diputar langsung dengan menekan tombol ini di mana saja — tanpa perlu pemicu di atas.
-                </p>
+                <p className="mb-2 text-xs text-text-muted">{t('soundboard.modal.hotkeyHint')}</p>
                 <KeystrokeCapture value={form.keystroke} onChange={(keystroke) => patch({ keystroke })} />
             </div>
 
