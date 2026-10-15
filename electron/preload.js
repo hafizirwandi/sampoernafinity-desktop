@@ -128,4 +128,16 @@ contextBridge.exposeInMainWorld('api', {
             return () => ipcRenderer.removeListener('tts:speak', listener);
         },
     },
+    updater: {
+        getState: () => ipcRenderer.invoke('updater:get-state'),
+        check: () => ipcRenderer.invoke('updater:check'),
+        install: () => ipcRenderer.invoke('updater:install'),
+        openDownload: () => ipcRenderer.invoke('updater:open-download'),
+        onState: (callback) => {
+            const listener = (_event, state) => callback(state);
+            ipcRenderer.on('updater:state', listener);
+
+            return () => ipcRenderer.removeListener('updater:state', listener);
+        },
+    },
 });

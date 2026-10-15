@@ -10,7 +10,8 @@
     "dev": "concurrently -k -n vite,electron -c \"#93c5fd,#fca5a5\" \"npm:dev:renderer\" \"npm:dev:electron\"",
     "build:renderer": "vite build",
     "build": "npm run build:renderer && electron-builder",
-    "start": "electron ."
+    "start": "electron .",
+    "build:win": "npm run build:renderer && electron-builder --win --x64"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
@@ -38,7 +39,28 @@
     ],
     "directories": {
       "output": "release"
-    }
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "http://localhost:8000/downloads/desktop"
+      }
+    ]
   },
   "allowScripts": {
     "electron@33.4.11": true,
@@ -46,6 +68,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "electron-updater": "^6.8.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tiktok-live-connector": "^2.4.4",

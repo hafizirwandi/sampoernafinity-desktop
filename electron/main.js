@@ -18,8 +18,10 @@ const soundboardEngine = require('./soundboardEngine');
 const ttsStore = require('./ttsStore');
 const ttsEngine = require('./ttsEngine');
 const googleTts = require('./googleTts');
+const updater = require('./updater');
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
+const UPDATE_FEED_URL = process.env.UPDATE_FEED_URL || `${API_BASE_URL}/downloads/desktop`;
 const DESKTOP_SCHEME = process.env.DESKTOP_APP_SCHEME || 'sampoernafinity';
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 
@@ -78,6 +80,7 @@ function createWindow() {
 
 tiktokConnection.onStateChange((state) => {
     mainWindow?.webContents.send('tiktok:status', state);
+    updater.setLiveActive(state.status === 'connected');
 });
 
 function handleDeepLink(url) {
@@ -170,6 +173,12 @@ if (!gotLock) {
 
         createWindow();
 
+        updater.start({
+            apiBaseUrl: API_BASE_URL,
+            feedUrl: UPDATE_FEED_URL,
+            getWebContents: () => mainWindow?.webContents,
+        });
+
         if (pendingDeepLinkUrl) {
             const url = pendingDeepLinkUrl;
             pendingDeepLinkUrl = null;
@@ -204,11 +213,21 @@ async function apiFetch(pathName, options = {}) {
         headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
+            'X-App-Version': app.getVersion(),
             ...(options.headers || {}),
         },
     });
 
     const body = await response.json().catch(() => ({}));
+
+    // Server says this build is too old: flip the renderer to the blocking
+    // update screen instead of treating it as an ordinary request error.
+    if (response.status === 426) {
+        updater.markRequired({ minVersion: body?.min_version, downloadUrl: body?.download_url });
+        const error = new Error(body?.message || 'Versi aplikasi ini sudah tidak didukung.');
+        error.code = 'UPDATE_REQUIRED';
+        throw error;
+    }
 
     if (!response.ok) {
         const message = body?.message || Object.values(body?.errors || {}).flat()[0] || 'Terjadi kesalahan. Coba lagi.';
@@ -243,8 +262,10 @@ ipcMain.handle('auth:session', async () => {
         });
 
         return data.user;
-    } catch {
-        clearToken();
+    } catch (error) {
+        // Outdated build, not a bad token — keep the user signed in so they
+        // land straight back in the app after updating.
+        if (error.code !== 'UPDATE_REQUIRED') clearToken();
         return null;
     }
 });
@@ -508,3 +529,10 @@ ipcMain.handle('tts:test-google', async (_event, { text, lang }) => {
     const filePaths = await googleTts.synthesizeToFiles(text, lang);
     return filePaths.map((p) => toAssetUrl(p));
 });
+
+// --- App updates --------------------------------------------------------
+
+ipcMain.handle('updater:get-state', () => updater.getState());
+ipcMain.handle('updater:check', () => updater.checkForUpdates());
+ipcMain.handle('updater:install', () => updater.install());
+ipcMain.handle('updater:open-download', () => updater.openDownloadPage());
