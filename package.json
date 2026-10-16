@@ -7,6 +7,7 @@
   "scripts": {
     "dev:renderer": "vite",
     "dev:electron": "wait-on tcp:5183 && cross-env VITE_DEV_SERVER_URL=http://localhost:5183 electron .",
+    "predev": "node scripts/register-dev-protocol.js",
     "dev": "concurrently -k -n vite,electron -c \"#93c5fd,#fca5a5\" \"npm:dev:renderer\" \"npm:dev:electron\"",
     "build:renderer": "vite build",
     "build": "npm run build:renderer && electron-builder",
@@ -58,7 +59,7 @@
     "publish": [
       {
         "provider": "generic",
-        "url": "http://localhost:8000/downloads/desktop"
+        "url": "https://sampoernafinity.com/downloads/desktop"
       }
     ]
   },

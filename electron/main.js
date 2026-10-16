@@ -20,7 +20,12 @@ const ttsEngine = require('./ttsEngine');
 const googleTts = require('./googleTts');
 const updater = require('./updater');
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
+// Installed builds talk to production; `npm run dev` talks to the local
+// Laravel server (same host as its APP_URL so OAuth cookies line up).
+// API_BASE_URL overrides either, e.g. to point a dev build at production.
+const PRODUCTION_API_URL = 'https://sampoernafinity.com';
+const LOCAL_API_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = process.env.API_BASE_URL || (app.isPackaged ? PRODUCTION_API_URL : LOCAL_API_URL);
 const UPDATE_FEED_URL = process.env.UPDATE_FEED_URL || `${API_BASE_URL}/downloads/desktop`;
 const DESKTOP_SCHEME = process.env.DESKTOP_APP_SCHEME || 'sampoernafinity';
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
